@@ -4,9 +4,23 @@
 
 use crate::chunk::{Chunk, OpCode};
 
-impl Chunk {
+pub trait Debug {
   /// Disassemble the given chunk.
-  pub fn disassemble(&self, name: &str) {
+  fn disassemble(&self, name: &str);
+
+  /// Disassemble the given instruction.
+  fn disassemble_instruction(&self, offset: usize) -> usize;
+
+  /// Print a simple instruction.
+  fn simple_instruction(&self, name: &str, offset: usize) -> usize;
+
+  /// Get the line number of the given offset.
+  fn line_number(&self, offset: usize) -> usize;
+}
+
+impl Debug for Chunk {
+  /// Disassemble the given chunk.
+  fn disassemble(&self, name: &str) {
     println!("== {} ==", name);
 
     let mut offset = 0;
@@ -16,7 +30,7 @@ impl Chunk {
   }
 
   /// Disassemble the given instruction.
-  pub fn disassemble_instruction(&self, offset: usize) -> usize {
+  fn disassemble_instruction(&self, offset: usize) -> usize {
     print!("{:04} ", offset);
 
     if offset > 0 && self.line_number(offset) == self.line_number(offset - 1) {
@@ -27,7 +41,7 @@ impl Chunk {
 
     let instruction = self.code[offset];
     match OpCode::from(instruction) {
-      OpCode::RETURN => self.simple_instruction("OP_RETURN", offset),
+      OpCode::RETURN => self.simple_instruction("RETURN", offset),
     }
   }
 
@@ -38,7 +52,7 @@ impl Chunk {
   }
 
   /// Get the line number of the given offset.
-  fn line_number(&self, offset: usize) -> usize {
+  fn line_number(&self, _offset: usize) -> usize {
     0
   }
 }
