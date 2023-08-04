@@ -37,3 +37,36 @@ pub fn enum_u8(input: TokenStream) -> TokenStream {
 
   gen.into()
 }
+
+#[proc_macro_derive(EnumUsize)]
+pub fn enum_usize(input: TokenStream) -> TokenStream {
+  let ast: DeriveInput = syn::parse(input).unwrap();
+
+  let name = &ast.ident;
+
+  let variants = match &ast.data {
+    syn::Data::Enum(e) => e.variants.iter().map(|v| v.ident.clone()),
+    _ => panic!("EnumFrom can only be used with enums"),
+  };
+
+  let gen = quote! {
+    impl From<usize> for #name {
+      fn from(val: usize) -> Self {
+        match val {
+          #(
+            x if x == #name::#variants as usize => #name::#variants,
+          )*
+          _ => panic!("Invalid value for enum {}", val),
+        }
+      }
+    }
+
+    impl Into<usize> for #name {
+      fn into(self) -> usize {
+        self as usize
+      }
+    }
+  };
+
+  gen.into()
+}
