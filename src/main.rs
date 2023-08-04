@@ -26,6 +26,6 @@ pub fn main() {
   chunk.write_chunk(constant as u8, 123);
   chunk.write_chunk(OpCode::RETURN.into(), 123);
   chunk.disassemble("Test Chunk");
-  vm.interpret(&mut chunk);
+  vm.interpret(&mut chunk).unwrap();
   vm.free();
 }

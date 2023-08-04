@@ -23,12 +23,14 @@ pub trait Debug {
 
 impl Debug for Chunk {
   fn disassemble(&self, name: &str) {
-    println!("\n-*-*-*-*-*- {} -*-*-*-*-*-\n", name);
+    println!("\n-*-*-*-> Global Disassembler : {} <-*-*-*-", name);
 
     let mut offset = 0;
     while offset < self.code.len() {
       offset = self.disassemble_instruction(offset);
     }
+
+    println!("-*-*-*-*-*-*-*- End of: {} -*-*-*-*-*-*-*-\n", name);
   }
 
   fn disassemble_instruction(&self, offset: usize) -> usize {

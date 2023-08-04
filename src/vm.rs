@@ -18,6 +18,16 @@ pub enum InterpretResult {
   RuntimeError,
 }
 
+/// ## InterpretError
+///
+/// An enum which represents the different errors that can occur
+/// during the interpretation.
+#[derive(Debug, Clone)]
+pub enum InterpretError {
+  CompileError,
+  RuntimeError,
+}
+
 /// ## VM
 ///
 /// A struct which represents the virtual machine.
@@ -28,41 +38,50 @@ pub struct VM<'a> {
 }
 
 impl<'a> VM<'a> {
-  pub fn interpret(&mut self, chunk: &'a mut Chunk) -> InterpretResult {
+  pub fn interpret(&mut self, chunk: &'a mut Chunk) -> Result<(), InterpretError> {
+    println!("-x-x-x-x- Called : Interpreter -x-x-x-x-");
     self.chunk = Some(chunk);
     self.ip = 0;
-    self.run()
+    if let Ok(()) = self.run() {
+      println!("-x-x-x-x- End of : Interpreter -x-x-x-x-\n");
+      return Ok(());
+    }
+    Err(InterpretError::RuntimeError)
   }
 
-  pub fn run(&mut self) -> InterpretResult {
-    while let Some(instruction) = self.read_byte() {
-      match instruction.into() {
+  pub fn run(&mut self) -> Result<(), InterpretError> {
+    while let Ok(instruction) = self.read_byte() {
+      let no_crush_end = match instruction.into() {
         OpCode::CONSTANT => {
-          let constant = self.read_constant();
-          println!("{}", constant.unwrap());
+          let constant = self.read_constant()?;
+          println!("{}", constant);
+          true
         }
-        OpCode::RETURN => return InterpretResult::Ok,
+        OpCode::RETURN => return Ok(()),
+      };
+      if no_crush_end {
+        return Ok(());
       }
     }
-    InterpretResult::Ok
+    Err(InterpretError::RuntimeError)
   }
 
-  fn read_byte(&mut self) -> Option<u8> {
+  fn read_byte(&mut self) -> Result<u8, InterpretError> {
     if let Some(ref chunk) = self.chunk {
       let byte = chunk.code[self.ip];
       self.ip += 1;
-      return Some(byte);
+      return Ok(byte);
     }
-    None
+    Err(InterpretError::RuntimeError)
   }
 
-  fn read_constant(&mut self) -> Option<Value> {
+  fn read_constant(&mut self) -> Result<Value, InterpretError> {
     if let Some(ref chunk) = self.chunk {
       let index = chunk.code[self.ip];
       self.ip += 1;
-      return Some(chunk.constants.values[index as usize]);
+      return Ok(chunk.constants.values[index as usize]);
     }
-    None
+    Err(InterpretError::RuntimeError)
   }
 }
 
