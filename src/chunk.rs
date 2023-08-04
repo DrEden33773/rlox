@@ -3,6 +3,10 @@
 //! A module which represents a sequence of bytecode,
 //! with it's dependent components.
 
+use crate::{
+  common::{Value, ValueArray},
+  utils::Init,
+};
 use enum_repr::EnumFromU8;
 
 /// ## OpCode
@@ -21,20 +25,7 @@ pub enum OpCode {
 #[derive(Debug, Default, Clone)]
 pub struct Chunk {
   pub(crate) code: Vec<u8>,
-}
-
-impl Chunk {
-  /// Creates a new [`Chunk`].
-  pub fn new(code: Vec<u8>) -> Self {
-    Self { code }
-  }
-
-  /// Creates a new [`Chunk`] with a given capacity.
-  pub fn with_capacity(capacity: usize) -> Self {
-    Self {
-      code: Vec::with_capacity(capacity),
-    }
-  }
+  pub(crate) constants: ValueArray,
 }
 
 impl Chunk {
@@ -43,8 +34,18 @@ impl Chunk {
     self.code.push(byte);
   }
 
+  /// Add a constant to the given chunk,
+  /// then return it's index.
+  pub fn add_constant(&mut self, value: Value) -> usize {
+    self.constants.write(value);
+    self.constants.values.len() - 1
+  }
+
   /// Clear the given chunk.
   pub fn clear(&mut self) {
     self.code.clear();
+    self.constants.clear();
   }
 }
+
+impl Init for Chunk {}

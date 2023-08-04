@@ -3,6 +3,7 @@ use std::env::args;
 use rlox::{
   chunk::{Chunk, OpCode},
   debug::Debug,
+  utils::Init,
 };
 
 /// Get the command line arguments
@@ -17,7 +18,7 @@ fn get_args() -> Vec<String> {
 
 pub fn main() {
   let _args = get_args();
-  let mut chunk = Chunk::default();
+  let mut chunk = Chunk::init();
   chunk.write(OpCode::RETURN as u8);
   chunk.disassemble("Test Chunk");
 }
