@@ -14,14 +14,16 @@ pub trait Debug {
   /// Print a simple instruction.
   fn simple_instruction(&self, name: &str, offset: usize) -> usize;
 
+  /// Print a constant instruction.
+  fn constant_instruction(&self, name: &str, offset: usize) -> usize;
+
   /// Get the line number of the given offset.
   fn line_number(&self, offset: usize) -> usize;
 }
 
 impl Debug for Chunk {
-  /// Disassemble the given chunk.
   fn disassemble(&self, name: &str) {
-    println!("== {} ==", name);
+    println!("\n-*-*-*-*-*- {} -*-*-*-*-*-\n", name);
 
     let mut offset = 0;
     while offset < self.code.len() {
@@ -29,7 +31,6 @@ impl Debug for Chunk {
     }
   }
 
-  /// Disassemble the given instruction.
   fn disassemble_instruction(&self, offset: usize) -> usize {
     print!("{:04} ", offset);
 
@@ -40,19 +41,35 @@ impl Debug for Chunk {
     }
 
     let instruction = self.code[offset];
-    match OpCode::from(instruction) {
-      OpCode::RETURN => self.simple_instruction("RETURN", offset),
+    match instruction.try_into() {
+      Ok(op_code) => match op_code {
+        OpCode::CONSTANT => self.constant_instruction("CONSTANT", offset),
+        OpCode::RETURN => self.simple_instruction("RETURN", offset),
+      },
+      _ => {
+        println!("Unknown opcode {}", instruction);
+        offset + 1
+      }
     }
   }
 
-  /// Print a simple instruction.
   fn simple_instruction(&self, name: &str, offset: usize) -> usize {
     println!("{}", name);
+    // move 1 byte ahead
     offset + 1
   }
 
-  /// Get the line number of the given offset.
-  fn line_number(&self, _offset: usize) -> usize {
-    0
+  fn constant_instruction(&self, name: &str, offset: usize) -> usize {
+    let index = self.code[offset + 1];
+    println!(
+      "{:16} {:4} '{}'",
+      name, index, self.constants.values[index as usize]
+    );
+    // move 2 byte ahead
+    offset + 2
+  }
+
+  fn line_number(&self, offset: usize) -> usize {
+    self.lines[offset]
   }
 }
