@@ -1,44 +1,19 @@
-use std::{
-  cmp::Ordering::{Equal, Greater, Less},
-  env::args,
-  fs::File,
-  io::{self, BufReader, Read},
-  process::exit,
-};
+use std::env::args;
+
+use rlox::chunk::{Chunk, OpCode};
+
+/// Get the command line arguments
+///
+/// We have to rewrite this, as [`std::env::args`]'s first argument
+/// is always the path to the executable
+fn get_args() -> Vec<String> {
+  let args = args().collect::<Vec<_>>();
+  let (_, args) = args.split_first().unwrap();
+  args.to_vec()
+}
 
 pub fn main() {
-  let args = args().collect::<Vec<_>>();
-  let (_root, args) = args.split_first().unwrap();
-  match args.len().cmp(&1) {
-    Greater => {
-      eprintln!("Usage: rlox [script]");
-      exit(64);
-    }
-    Equal => run_file(&args[0]).unwrap(),
-    Less => run_prompt(&[]),
-  }
+  let args = get_args();
+  let mut chunk = Chunk::default();
+  chunk.write(OpCode::RETURN as u8);
 }
-
-fn run_file(path: &str) -> io::Result<()> {
-  let file = File::open(path)?;
-  let mut buffer = Vec::new();
-  BufReader::new(file).read_to_end(&mut buffer)?;
-  run_prompt(&buffer);
-  Ok(())
-}
-
-fn run_prompt(src: &[u8]) {
-  match src.is_empty() {
-    true => {
-      println!("Unimplemented");
-    }
-    false => {
-      let src = String::from_utf8_lossy(src);
-      src.lines().for_each(|line| {
-        run(line);
-      });
-    }
-  }
-}
-
-fn run(_src: &str) {}
