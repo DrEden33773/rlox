@@ -8,6 +8,7 @@ use syn::DeriveInput;
 #[proc_macro_derive(EnumFromU8)]
 pub fn enum_from_u8(input: TokenStream) -> TokenStream {
   let ast: DeriveInput = syn::parse(input).unwrap();
+
   let name = &ast.ident;
 
   let variants = match &ast.data {
@@ -34,6 +35,7 @@ pub fn enum_from_u8(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(EnumFromU16)]
 pub fn enum_from_u16(input: TokenStream) -> TokenStream {
   let ast: DeriveInput = syn::parse(input).unwrap();
+
   let name = &ast.ident;
 
   let variants = match &ast.data {
