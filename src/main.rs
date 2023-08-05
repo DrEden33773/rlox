@@ -24,7 +24,7 @@ fn repl(vm: &mut VM) -> Result<(), InterpretError> {
   println!("Welcome to RLox REPL!");
   println!("Press Ctrl+C to exit.");
   loop {
-    print!("> ");
+    print!("|> ");
     io::stdout().flush().unwrap();
 
     let mut line = String::new();

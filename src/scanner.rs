@@ -10,7 +10,7 @@ use crate::utils::Init;
 /// ## TokenType
 ///
 /// An enum which represents the different types of tokens.
-#[repr(u8)]
+#[repr(C)]
 #[derive(Debug, enum_repr::EnumU8, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
   // Single-character tokens.
@@ -102,10 +102,48 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-  fn is_at_end(&self) -> bool {
-    self.current >= self.source.len()
+  /// Make a token, specifically from `string`.
+  fn string(&mut self) -> Token<'a> {
+    // Try finding the closing quote.
+    while self.peek() != b'"' && !self.is_at_end() {
+      if self.peek() == b'\n' {
+        self.line += 1;
+      }
+      self.advance();
+    }
+
+    // Cannot find the closing quote.
+    if self.is_at_end() {
+      return self.error_token("Unterminated string.");
+    }
+
+    self.advance();
+    self.make_token(TokenType::String)
   }
 
+  /// Make a token, specifically from `number`.
+  fn number(&mut self) -> Token<'a> {
+    while self.peek().is_ascii_digit() {
+      self.advance();
+    }
+
+    // Seeking for a fractional part
+    if self.peek() == b'.' && self.peek_next().is_ascii_digit() {
+      // Consume the "."
+      self.advance();
+
+      // Consume the fractional part
+      while self.peek().is_ascii_digit() {
+        self.advance();
+      }
+    }
+
+    self.make_token(TokenType::Number)
+  }
+}
+
+impl<'a> Scanner<'a> {
+  /// Make a token.
   fn make_token(&self, token_type: TokenType) -> Token<'a> {
     Token {
       token_type,
@@ -114,6 +152,7 @@ impl<'a> Scanner<'a> {
     }
   }
 
+  /// Make an error token.
   fn error_token(&self, message: &'a str) -> Token<'a> {
     Token {
       token_type: TokenType::Error,
@@ -121,13 +160,140 @@ impl<'a> Scanner<'a> {
       lexeme: message,
     }
   }
+}
 
+impl<'a> Scanner<'a> {
+  /// Scan token from scanner
   pub fn scan_token(&mut self) -> Token<'a> {
+    self.skip_white_space();
+
+    // reset start position
     self.start = self.current;
+
     if self.is_at_end() {
       return self.make_token(TokenType::Eof);
     }
-    self.error_token("Unexpected character.")
+
+    let c = self.advance();
+
+    if c.is_ascii_digit() {
+      return self.number();
+    }
+
+    match c {
+      // mono-character tokens
+      b'(' => self.make_token(TokenType::LeftParen),
+      b')' => self.make_token(TokenType::RightParen),
+      b'{' => self.make_token(TokenType::LeftBrace),
+      b'}' => self.make_token(TokenType::RightBrace),
+      b';' => self.make_token(TokenType::Semicolon),
+      b',' => self.make_token(TokenType::Comma),
+      b'.' => self.make_token(TokenType::Dot),
+      b'-' => self.make_token(TokenType::Minus),
+      b'+' => self.make_token(TokenType::Plus),
+      b'/' => self.make_token(TokenType::Slash),
+      b'*' => self.make_token(TokenType::Star),
+      // possible two-character tokens
+      b'!' => {
+        if self.match_next(b'=') {
+          self.make_token(TokenType::BangEqual)
+        } else {
+          self.make_token(TokenType::Bang)
+        }
+      }
+      b'=' => {
+        if self.match_next(b'=') {
+          self.make_token(TokenType::EqualEqual)
+        } else {
+          self.make_token(TokenType::Equal)
+        }
+      }
+      b'<' => {
+        if self.match_next(b'=') {
+          self.make_token(TokenType::LessEqual)
+        } else {
+          self.make_token(TokenType::Less)
+        }
+      }
+      b'>' => {
+        if self.match_next(b'=') {
+          self.make_token(TokenType::GreaterEqual)
+        } else {
+          self.make_token(TokenType::Greater)
+        }
+      }
+      // string
+      b'"' => self.string(),
+      _ => self.error_token("Unexpected character."),
+    }
+  }
+}
+
+impl<'a> Scanner<'a> {
+  /// Check if the scanner is at the end of the source code.
+  fn is_at_end(&self) -> bool {
+    self.current >= self.source.len()
+  }
+
+  /// Get current char, then advance the scanner (one step).
+  fn advance(&mut self) -> u8 {
+    self.current += 1;
+    self.source.as_bytes()[self.current - 1]
+  }
+
+  /// Check if the next char matches the expected char.
+  ///
+  /// If it matches, advance the scanner (one step) immediately.
+  fn match_next(&mut self, expected: u8) -> bool {
+    if self.is_at_end() {
+      return false;
+    }
+    if self.source.as_bytes()[self.current] != expected {
+      return false;
+    }
+    self.current += 1;
+    true
+  }
+
+  /// Get current char, without advancing the scanner.
+  fn peek(&self) -> u8 {
+    if self.is_at_end() {
+      return b'\0';
+    }
+    self.source.as_bytes()[self.current]
+  }
+
+  /// Get the next char, without advancing the scanner.
+  fn peek_next(&self) -> u8 {
+    if self.current + 1 >= self.source.len() {
+      return b'\0';
+    }
+    self.source.as_bytes()[self.current + 1]
+  }
+
+  fn skip_white_space(&mut self) {
+    loop {
+      let c = self.peek();
+      match c {
+        b' ' | b'\r' | b'\t' => {
+          self.advance();
+        }
+        b'\n' => {
+          self.line += 1;
+          self.advance();
+        }
+        b'/' => {
+          if self.peek_next() == b'/' {
+            while self.peek() != b'\n' && !self.is_at_end() {
+              self.advance();
+            }
+          } else {
+            return;
+          }
+        }
+        _ => return,
+      }
+    }
   }
 }
 
