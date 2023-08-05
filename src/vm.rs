@@ -45,9 +45,7 @@ impl VM {
   /// Interpret from string.
   pub fn interpret(&mut self, src: String) -> Result<(), InterpretError> {
     self.rebind(Chunk::init());
-    if let Err(InterpretError::CompileError(info)) = self.compile(src) {
-      return Err(InterpretError::CompileError(info));
-    }
+    self.compile(src)?;
     self.run()
   }
 

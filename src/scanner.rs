@@ -66,6 +66,7 @@ pub enum TokenType {
 /// ## Token
 ///
 /// A struct which represents a token.
+#[derive(Debug, Clone)]
 pub struct Token {
   /// The type of the token.
   pub(crate) token_type: TokenType,

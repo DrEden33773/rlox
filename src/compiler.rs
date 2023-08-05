@@ -8,6 +8,7 @@
 
 use crate::{
   scanner::{Scanner, Token, TokenType},
+  utils::Init,
   vm::{InterpretError, VM},
 };
 
@@ -17,38 +18,84 @@ pub struct Parser {
   pub(crate) current: Token,
   /// Previous token.
   pub(crate) previous: Token,
+  /// If had error.
   pub(crate) had_error: bool,
+  /// If in panic mode.
+  pub(crate) panic_mode: bool,
+}
+
+impl Init for Parser {}
+
+impl Parser {
+  fn advance(&mut self, scanner: &mut Scanner) -> Result<(), InterpretError> {
+    self.previous = self.current.clone();
+    loop {
+      self.current = scanner.scan_token();
+      if self.current.token_type != TokenType::Error {
+        break;
+      }
+      self.error_at_current(self.current.lexeme.to_owned())?;
+    }
+    Ok(())
+  }
+
+  fn consume(
+    &mut self,
+    scanner: &mut Scanner,
+    token_type: TokenType,
+    message: String,
+  ) -> Result<(), InterpretError> {
+    if self.current.token_type == token_type {
+      self.advance(scanner)?;
+      return Ok(());
+    }
+    self.error_at_current(message)
+  }
 }
 
 impl Parser {
-  fn error_at_current(&mut self, message: &str) {
-    self.error_at(true, message);
+  fn error_at_current(&mut self, message: String) -> Result<(), InterpretError> {
+    self.error_at(true, message)
   }
 
-  fn error(&mut self, message: &str) {
-    self.error_at(false, message);
+  fn error(&mut self, message: String) -> Result<(), InterpretError> {
+    self.error_at(false, message)
   }
 
-  fn error_at(&mut self, if_current: bool, message: &str) {
+  fn error_at(&mut self, if_current: bool, message: String) -> Result<(), InterpretError> {
+    if self.panic_mode {
+      return Ok(());
+    }
+    self.panic_mode = true;
     let token = if if_current {
       &self.current
     } else {
       &self.previous
     };
-    eprint!("[line {}] Error", token.line);
+    let mut error_str = String::new();
+    error_str += &format!("[line {}] Error", token.line);
     match token.token_type {
-      TokenType::Eof => eprint!(" at end"),
+      TokenType::Eof => error_str += " at end",
       TokenType::Error => {}
-      _ => eprint!(" at '{}'", token.lexeme),
+      _ => error_str += &format!(" at '{}'", token.lexeme),
     }
-    eprintln!(": {}", message);
+    error_str += &format!(": {}", message);
     self.had_error = true;
+    Err(InterpretError::CompileError(error_str))
   }
 }
 
 impl VM {
   pub(crate) fn compile(&mut self, src: String) -> Result<(), InterpretError> {
-    let mut _scanner = Scanner::bind(src);
+    let mut scanner = Scanner::bind(src);
+    let mut parser = Parser::init();
+    parser.advance(&mut scanner)?;
+    // parser.expression(&mut scanner)?;
+    parser.consume(
+      &mut scanner,
+      TokenType::Eof,
+      "Expect end of expression.".into(),
+    )?;
     Ok(())
   }
 
