@@ -43,7 +43,7 @@ pub struct VM {
 
 impl VM {
   /// Interpret from string.
-  pub fn interpret(&mut self, src: &str) -> Result<(), InterpretError> {
+  pub fn interpret(&mut self, src: String) -> Result<(), InterpretError> {
     self.rebind(Chunk::init());
     if let Err(InterpretError::CompileError(info)) = self.compile(src) {
       return Err(InterpretError::CompileError(info));
@@ -52,15 +52,15 @@ impl VM {
   }
 
   /// Interpret from string, but only show tokens.
-  pub fn interpret_to_token(&mut self, src: &str) -> Result<(), InterpretError> {
+  pub fn interpret_to_token(&mut self, src: String) -> Result<(), InterpretError> {
     self.compile_to_token(src)
   }
 
   /// Interpret from file(path).
-  pub fn interpret_file(&mut self, path: &str) -> Result<(), InterpretError> {
+  pub fn interpret_file(&mut self, path: String) -> Result<(), InterpretError> {
     use std::fs::read_to_string;
     if let Ok(content) = read_to_string(path) {
-      self.interpret_to_token(content.as_str())
+      self.interpret_to_token(content)
     } else {
       Err(InterpretError::CompileError(
         "Failed to interpret from file".into(),

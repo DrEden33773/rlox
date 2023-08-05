@@ -66,7 +66,7 @@ pub enum TokenType {
 /// ## Token
 ///
 /// A struct which represents a token.
-pub struct Token<'a> {
+pub struct Token {
   /// The type of the token.
   pub(crate) token_type: TokenType,
   /// The line of the token.
@@ -74,17 +74,17 @@ pub struct Token<'a> {
   /// The lexeme of the token.
   ///
   /// A lexeme is the text that the token represents.
-  pub(crate) lexeme: &'a str,
+  pub(crate) lexeme: String,
 }
 
-impl<'a> Init for Token<'a> {}
+impl Init for Token {}
 
-impl<'a> Default for Token<'a> {
+impl Default for Token {
   fn default() -> Self {
     Self {
       token_type: TokenType::Eof,
       line: 1,
-      lexeme: "",
+      lexeme: "".into(),
     }
   }
 }
@@ -93,9 +93,9 @@ impl<'a> Default for Token<'a> {
 ///
 /// A struct which represents a scanner.
 #[derive(Debug)]
-pub struct Scanner<'a> {
+pub struct Scanner {
   /// The source code.
-  pub(crate) source: &'a str,
+  pub(crate) source: String,
   /// The start position.
   pub(crate) start: usize,
   /// The current position.
@@ -104,7 +104,7 @@ pub struct Scanner<'a> {
   pub(crate) line: usize,
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Try to match reserved keyword, with:
   /// - a given `start` index
   /// - an expected `rest` pattern
@@ -150,9 +150,9 @@ impl<'a> Scanner<'a> {
   }
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Make a token, specifically from `string`.
-  fn string(&mut self) -> Token<'a> {
+  fn string(&mut self) -> Token {
     // Try finding the closing quote.
     while self.peek() != b'"' && !self.is_at_end() {
       if self.peek() == b'\n' {
@@ -163,7 +163,7 @@ impl<'a> Scanner<'a> {
 
     // Cannot find the closing quote.
     if self.is_at_end() {
-      return self.error_token("Unterminated string.");
+      return self.error_token("Unterminated string.".into());
     }
 
     self.advance();
@@ -171,7 +171,7 @@ impl<'a> Scanner<'a> {
   }
 
   /// Make a token, specifically from `number`.
-  fn number(&mut self) -> Token<'a> {
+  fn number(&mut self) -> Token {
     while self.peek().is_ascii_digit() {
       self.advance();
     }
@@ -191,7 +191,7 @@ impl<'a> Scanner<'a> {
   }
 
   /// Make a token, specifically from `identifier`.
-  fn identifier(&mut self) -> Token<'a> {
+  fn identifier(&mut self) -> Token {
     while matches!(self.peek(), c if c.is_ascii_identifier() || c.is_ascii_digit()) {
       self.advance();
     }
@@ -199,18 +199,18 @@ impl<'a> Scanner<'a> {
   }
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Make a token.
-  fn make_token(&self, token_type: TokenType) -> Token<'a> {
+  fn make_token(&self, token_type: TokenType) -> Token {
     Token {
       token_type,
       line: self.line,
-      lexeme: &self.source[self.start..self.current],
+      lexeme: (&self.source[self.start..self.current]).into(),
     }
   }
 
   /// Make an error token.
-  fn error_token(&self, message: &'a str) -> Token<'a> {
+  fn error_token(&self, message: String) -> Token {
     Token {
       token_type: TokenType::Error,
       line: self.line,
@@ -219,9 +219,9 @@ impl<'a> Scanner<'a> {
   }
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Scan token from scanner
-  pub fn scan_token(&mut self) -> Token<'a> {
+  pub fn scan_token(&mut self) -> Token {
     self.skip_white_space();
 
     // reset start position
@@ -284,12 +284,12 @@ impl<'a> Scanner<'a> {
       }
       // string
       b'"' => self.string(),
-      _ => self.error_token("Unexpected character."),
+      _ => self.error_token("Unexpected character.".into()),
     }
   }
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Check if the scanner is at the end of the source code.
   fn is_at_end(&self) -> bool {
     self.current >= self.source.len()
@@ -357,10 +357,10 @@ impl<'a> Scanner<'a> {
   }
 }
 
-impl<'a> Scanner<'a> {
+impl Scanner {
   /// Bind a new scanner to the source code.
   #[inline]
-  pub fn init(src: &'a str) -> Self {
+  pub fn init(src: String) -> Self {
     Self {
       source: src,
       start: 0,
@@ -371,7 +371,7 @@ impl<'a> Scanner<'a> {
 
   /// Bind a new scanner to the source code.
   #[inline]
-  pub fn bind(src: &'a str) -> Self {
+  pub fn bind(src: String) -> Self {
     Scanner::init(src)
   }
 }

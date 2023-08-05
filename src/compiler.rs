@@ -12,15 +12,15 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct Parser<'a> {
+pub struct Parser {
   /// Current token.
-  pub(crate) current: Token<'a>,
+  pub(crate) current: Token,
   /// Previous token.
-  pub(crate) previous: Token<'a>,
+  pub(crate) previous: Token,
   pub(crate) had_error: bool,
 }
 
-impl<'a> Parser<'a> {
+impl Parser {
   fn error_at_current(&mut self, message: &str) {
     self.error_at(true, message);
   }
@@ -47,12 +47,12 @@ impl<'a> Parser<'a> {
 }
 
 impl VM {
-  pub(crate) fn compile(&mut self, src: &str) -> Result<(), InterpretError> {
+  pub(crate) fn compile(&mut self, src: String) -> Result<(), InterpretError> {
     let mut _scanner = Scanner::bind(src);
     Ok(())
   }
 
-  pub(crate) fn compile_to_token(&mut self, src: &str) -> Result<(), InterpretError> {
+  pub(crate) fn compile_to_token(&mut self, src: String) -> Result<(), InterpretError> {
     let mut scanner = Scanner::bind(src);
     let mut line = 0_usize;
     loop {

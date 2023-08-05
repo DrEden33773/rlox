@@ -14,7 +14,7 @@ pub fn main() {
   if argc == 1 {
     repl(&mut vm).unwrap();
   } else if argc == 2 {
-    run_file(&mut vm, &argv[1]).unwrap();
+    run_file(&mut vm, argv[1].to_owned()).unwrap();
   }
   vm.free();
 }
@@ -30,11 +30,11 @@ fn repl(vm: &mut VM) -> Result<(), InterpretError> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
 
-    vm.interpret_to_token(line.as_str())?;
+    vm.interpret_to_token(line)?;
   }
 }
 
 /// Run the given file.
-fn run_file(vm: &mut VM, path: &str) -> Result<(), InterpretError> {
+fn run_file(vm: &mut VM, path: String) -> Result<(), InterpretError> {
   vm.interpret_file(path)
 }
