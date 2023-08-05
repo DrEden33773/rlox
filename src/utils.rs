@@ -30,3 +30,15 @@ pub fn args() -> Vec<String> {
   use std::env::args;
   args().collect::<Vec<_>>()
 }
+
+/// A trait for checking if a type is a valid part of an identifier.
+pub trait Identifier {
+  fn is_ascii_identifier(&self) -> bool;
+}
+
+impl Identifier for u8 {
+  /// Check if a byte is a valid part of an identifier.
+  fn is_ascii_identifier(&self) -> bool {
+    matches!(self, b'a'..=b'z' | b'A'..=b'Z' | b'_')
+  }
+}

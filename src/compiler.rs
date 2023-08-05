@@ -23,7 +23,7 @@ impl<'a> VM<'a> {
       } else {
         print!("   | ");
       }
-      println!("{:2?} `{}`", token.token_type, token.lexeme);
+      println!("[{:?}] '{}'", token.token_type, token.lexeme);
       match token.token_type {
         TokenType::Eof | TokenType::Error => break,
         _ => (),

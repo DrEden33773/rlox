@@ -5,7 +5,7 @@
 //! - reading the source code
 //! - producing a stream of tokens.
 
-use crate::utils::Init;
+use crate::utils::{Identifier, Init};
 
 /// ## TokenType
 ///
@@ -140,6 +140,14 @@ impl<'a> Scanner<'a> {
 
     self.make_token(TokenType::Number)
   }
+
+  /// Make a token, specifically from `identifier`.
+  fn identifier(&mut self) -> Token<'a> {
+    while matches!(self.peek(), c if c.is_ascii_identifier() || c.is_ascii_digit()) {
+      self.advance();
+    }
+    self.make_token(TokenType::Identifier)
+  }
 }
 
 impl<'a> Scanner<'a> {
@@ -178,6 +186,9 @@ impl<'a> Scanner<'a> {
 
     if c.is_ascii_digit() {
       return self.number();
+    }
+    if c.is_ascii_identifier() {
+      return self.identifier();
     }
 
     match c {
