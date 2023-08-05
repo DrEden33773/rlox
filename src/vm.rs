@@ -8,16 +8,6 @@ use crate::{
   common::Value,
 };
 
-/// ## InterpretResult
-///
-/// An enum which represents the result of the interpretation.
-#[derive(Debug, Clone)]
-pub enum InterpretResult {
-  Ok,
-  CompileError,
-  RuntimeError,
-}
-
 /// ## InterpretError
 ///
 /// An enum which represents the different errors that can occur
@@ -33,11 +23,14 @@ pub enum InterpretError {
 /// A struct which represents the virtual machine.
 #[derive(Debug)]
 pub struct VM<'a> {
+  /// A reference to the chunk (or, None).
   pub(crate) chunk: Option<&'a mut Chunk>,
+  /// The instruction pointer (actually, the index).
   pub(crate) ip: usize,
 }
 
 impl<'a> VM<'a> {
+  /// Link the given chunk to the virtual machine, then interpret it.
   pub fn interpret(&mut self, chunk: &'a mut Chunk) -> Result<(), InterpretError> {
     println!("-x-x-x-x- Called : Interpreter -x-x-x-x-");
     self.chunk = Some(chunk);
@@ -49,6 +42,7 @@ impl<'a> VM<'a> {
     Err(InterpretError::RuntimeError)
   }
 
+  /// Run the virtual machine (with a valid chunk reference).
   pub fn run(&mut self) -> Result<(), InterpretError> {
     while let Ok(instruction) = self.read_byte() {
       let no_crush_end = match instruction.into() {
@@ -66,6 +60,7 @@ impl<'a> VM<'a> {
     Err(InterpretError::RuntimeError)
   }
 
+  /// Read a byte from the chunk (update ip).
   fn read_byte(&mut self) -> Result<u8, InterpretError> {
     if let Some(ref chunk) = self.chunk {
       let byte = chunk.code[self.ip];
@@ -75,6 +70,7 @@ impl<'a> VM<'a> {
     Err(InterpretError::RuntimeError)
   }
 
+  /// Read a constant from the chunk (update ip).
   fn read_constant(&mut self) -> Result<Value, InterpretError> {
     if let Some(ref chunk) = self.chunk {
       let index = chunk.code[self.ip];
@@ -86,9 +82,15 @@ impl<'a> VM<'a> {
 }
 
 impl<'a> VM<'a> {
+  /// Create a new virtual machine (with no chunk linked, ip as 0).
   pub fn init() -> Self {
     Self { chunk: None, ip: 0 }
   }
 
-  pub fn free(&mut self) {}
+  /// Free the chunk (if any).
+  pub fn free(&mut self) {
+    if let Some(ref mut chunk) = self.chunk {
+      chunk.clear();
+    }
+  }
 }
