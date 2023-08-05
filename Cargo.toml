@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 enum_repr = { path = "./enum_repr" }
 project-root = "0.2.2"
-
+lazy_static = "1.4.0"
+once_cell = "1.18.0"
 
 [features]
 default = ["debug_trace_execution", "debug_trace_stack"]

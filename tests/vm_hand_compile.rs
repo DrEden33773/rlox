@@ -32,6 +32,6 @@ fn manual_demo() {
   chunk.write_chunk(OpCode::Return.into(), 123);
 
   chunk.disassemble("Test Chunk");
-  vm.interpret(&mut chunk).unwrap();
+  vm.interpret_chunk(&mut chunk).unwrap();
   vm.free();
 }

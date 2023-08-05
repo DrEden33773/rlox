@@ -7,12 +7,52 @@
 //! It is responsible for executing the bytecode.
 
 use crate::{
-  scanner::{Scanner, TokenType},
+  scanner::{Scanner, Token, TokenType},
   vm::{InterpretError, VM},
 };
 
+#[derive(Default)]
+pub struct Parser<'a> {
+  /// Current token.
+  pub(crate) current: Token<'a>,
+  /// Previous token.
+  pub(crate) previous: Token<'a>,
+  pub(crate) had_error: bool,
+}
+
+impl<'a> Parser<'a> {
+  fn error_at_current(&mut self, message: &str) {
+    self.error_at(true, message);
+  }
+
+  fn error(&mut self, message: &str) {
+    self.error_at(false, message);
+  }
+
+  fn error_at(&mut self, if_current: bool, message: &str) {
+    let token = if if_current {
+      &self.current
+    } else {
+      &self.previous
+    };
+    eprint!("[line {}] Error", token.line);
+    match token.token_type {
+      TokenType::Eof => eprint!(" at end"),
+      TokenType::Error => {}
+      _ => eprint!(" at '{}'", token.lexeme),
+    }
+    eprintln!(": {}", message);
+    self.had_error = true;
+  }
+}
+
 impl<'a> VM<'a> {
   pub(crate) fn compile(&mut self, src: &str) -> Result<(), InterpretError> {
+    let mut _scanner = Scanner::bind(src);
+    Ok(())
+  }
+
+  pub(crate) fn compile_to_token(&mut self, src: &str) -> Result<(), InterpretError> {
     let mut scanner = Scanner::bind(src);
     let mut line = 0_usize;
     loop {

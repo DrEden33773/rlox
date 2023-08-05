@@ -54,10 +54,14 @@ pub enum TokenType {
   True,
   Var,
   While,
+  // Dollar sign.
+  Dollar,
   // Error and EOF.
   Error,
   Eof,
 }
+
+// TODO: Add support of `dollar` sign => "var = ${var}".
 
 /// ## Token
 ///
@@ -98,6 +102,52 @@ pub struct Scanner<'a> {
   pub(crate) current: usize,
   /// The current line.
   pub(crate) line: usize,
+}
+
+impl<'a> Scanner<'a> {
+  /// Try to match reserved keyword, with:
+  /// - a given `start` index
+  /// - an expected `rest` pattern
+  /// - a `candidate` token type.
+  fn check_keyword(&self, start: usize, rest: &str, candidate: TokenType) -> TokenType {
+    let len = rest.len();
+    // 1. steps from start index to current index `should be equal to` len, or the match must failed
+    // 2. if `1.` suits, then check if the rest of the source code is equal to the rest pattern
+    if self.current - start == len && &self.source[start..start + len] == rest {
+      candidate
+    } else {
+      TokenType::Identifier
+    }
+  }
+
+  /// Generate correct identifier token.
+  fn identifier_type(&self) -> TokenType {
+    match self.source.as_bytes()[0] {
+      b'a' => self.check_keyword(1, "nd", TokenType::And),
+      b'c' => self.check_keyword(1, "lass", TokenType::Class),
+      b'e' => self.check_keyword(1, "lse", TokenType::Else),
+      b'i' => self.check_keyword(1, "f", TokenType::If),
+      b'n' => self.check_keyword(1, "il", TokenType::Nil),
+      b'o' => self.check_keyword(1, "r", TokenType::Or),
+      b'p' => self.check_keyword(1, "rint", TokenType::Print),
+      b'r' => self.check_keyword(1, "eturn", TokenType::Return),
+      b's' => self.check_keyword(1, "uper", TokenType::Super),
+      b'v' => self.check_keyword(1, "ar", TokenType::Var),
+      b'w' => self.check_keyword(1, "hile", TokenType::While),
+      b'f' if self.current - self.start > 1 => match self.source.as_bytes()[1] {
+        b'a' => self.check_keyword(2, "lse", TokenType::False),
+        b'o' => self.check_keyword(2, "r", TokenType::For),
+        b'u' => self.check_keyword(2, "n", TokenType::Fun),
+        _ => TokenType::Identifier,
+      },
+      b't' if self.current - self.start > 1 => match self.source.as_bytes()[1] {
+        b'h' => self.check_keyword(2, "is", TokenType::This),
+        b'r' => self.check_keyword(2, "ue", TokenType::True),
+        _ => TokenType::Identifier,
+      },
+      _ => TokenType::Identifier,
+    }
+  }
 }
 
 impl<'a> Scanner<'a> {
@@ -145,7 +195,7 @@ impl<'a> Scanner<'a> {
     while matches!(self.peek(), c if c.is_ascii_identifier() || c.is_ascii_digit()) {
       self.advance();
     }
-    self.make_token(TokenType::Identifier)
+    self.make_token(self.identifier_type())
   }
 }
 
