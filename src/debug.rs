@@ -45,13 +45,13 @@ impl Debug for Chunk {
     let instruction = self.code[offset];
     match instruction.try_into() {
       Ok(op_code) => match op_code {
-        OpCode::CONSTANT => self.constant_instruction("CONSTANT", offset),
-        OpCode::ADD => self.simple_instruction("ADD", offset),
-        OpCode::SUBTRACT => self.simple_instruction("SUBTRACT", offset),
-        OpCode::MULTIPLY => self.simple_instruction("MULTIPLY", offset),
-        OpCode::DIVIDE => self.simple_instruction("DIVIDE", offset),
-        OpCode::NEGATE => self.simple_instruction("NEGATE", offset),
-        OpCode::RETURN => self.simple_instruction("RETURN", offset),
+        OpCode::Constant => self.constant_instruction("CONSTANT", offset),
+        OpCode::Add => self.simple_instruction("ADD", offset),
+        OpCode::Subtract => self.simple_instruction("SUBTRACT", offset),
+        OpCode::Multiply => self.simple_instruction("MULTIPLY", offset),
+        OpCode::Divide => self.simple_instruction("DIVIDE", offset),
+        OpCode::Negate => self.simple_instruction("NEGATE", offset),
+        OpCode::Return => self.simple_instruction("RETURN", offset),
       },
       _ => {
         println!("Unknown opcode {}", instruction);

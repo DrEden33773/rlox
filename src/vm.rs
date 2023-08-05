@@ -3,7 +3,10 @@
 //! ## Based on Stack
 //!
 //! The VM (aka. Virtual Machine) is the core of the interpreter.
-//! It is responsible for executing the bytecode.
+//!
+//! It is responsible for:
+//!
+//! - executing the bytecode
 
 use std::collections::VecDeque;
 
@@ -160,22 +163,22 @@ impl<'a> VM<'a> {
   #[inline]
   fn run_one_step(&mut self) -> Result<(), InterpretError> {
     let no_crush_end = match self.read_byte()?.into() {
-      OpCode::CONSTANT => {
+      OpCode::Constant => {
         let constant = self.read_constant()?;
         self.stack.push_back(constant);
         true
       }
-      OpCode::NEGATE => self.monocular_op(|v| -v),
-      OpCode::RETURN => {
+      OpCode::Negate => self.monocular_op(|v| -v),
+      OpCode::Return => {
         if let Some(value) = self.stack.pop_back() {
           println!("{}", value);
         }
         return Ok(());
       }
-      OpCode::ADD => self.binary_op(|l, r| l + r),
-      OpCode::SUBTRACT => self.binary_op(|l, r| l - r),
-      OpCode::MULTIPLY => self.binary_op(|l, r| l * r),
-      OpCode::DIVIDE => self.binary_op(|l, r| l / r),
+      OpCode::Add => self.binary_op(|l, r| l + r),
+      OpCode::Subtract => self.binary_op(|l, r| l - r),
+      OpCode::Multiply => self.binary_op(|l, r| l * r),
+      OpCode::Divide => self.binary_op(|l, r| l / r),
     };
     if no_crush_end {
       Ok(())

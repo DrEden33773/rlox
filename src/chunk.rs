@@ -16,13 +16,13 @@ use enum_repr::EnumU8;
 #[repr(u8)]
 #[derive(EnumU8)]
 pub enum OpCode {
-  CONSTANT,
-  ADD,
-  SUBTRACT,
-  MULTIPLY,
-  DIVIDE,
-  NEGATE,
-  RETURN,
+  Constant,
+  Add,
+  Subtract,
+  Multiply,
+  Divide,
+  Negate,
+  Return,
 }
 
 /// ## Chunk

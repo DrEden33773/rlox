@@ -1,3 +1,5 @@
 print 1 + 2;
-
-print 1 + 2;
+fun a(l, r) {
+  print l + r;
+}
+a(1, 2);
