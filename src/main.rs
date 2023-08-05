@@ -21,8 +21,8 @@ pub fn main() {
 
 /// Run the REPL.
 fn repl(vm: &mut VM) -> Result<(), InterpretError> {
-  println!("Welcome to RLox REPL!");
-  println!("Press Ctrl+C to exit.");
+  println!("Welcome to lox's REPL!");
+  println!("Press <Ctrl> + <C> to exit.");
   loop {
     print!("|> ");
     io::stdout().flush().unwrap();
