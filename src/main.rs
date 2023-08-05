@@ -1,27 +1,40 @@
-use rlox::{
-  chunk::{Chunk, OpCode},
-  debug::Debug,
-  utils::Init,
-  vm::VM,
-};
+use rlox::{utils, vm::InterpretError, vm::VM};
+use std::io::{self, Write};
+use std::process::exit;
 
-fn manual_demo() {
+pub fn main() {
+  let argv = utils::args();
+  let argc = argv.len();
+  if argc > 2 {
+    eprintln!("Usage: rlox [path]");
+    exit(64);
+  }
+
   let mut vm = VM::init();
-  let mut chunk = Chunk::init();
-  let constant = chunk.add_constant(1.2);
-  chunk.write_chunk(OpCode::CONSTANT.into(), 123);
-  chunk.write_chunk(constant as u8, 123);
-  chunk.write_chunk(OpCode::NEGATE.into(), 123);
-  let constant = chunk.add_constant(2.3);
-  chunk.write_chunk(OpCode::CONSTANT.into(), 123);
-  chunk.write_chunk(constant as u8, 123);
-  chunk.write_chunk(OpCode::ADD.into(), 123);
-  chunk.write_chunk(OpCode::RETURN.into(), 123);
-  chunk.disassemble("Test Chunk");
-  vm.interpret(&mut chunk).unwrap();
+  if argc == 1 {
+    repl(&mut vm).unwrap();
+  } else if argc == 2 {
+    run_file(&mut vm, &argv[1]).unwrap();
+  }
   vm.free();
 }
 
-pub fn main() {
-  manual_demo();
+/// Run the REPL.
+fn repl(vm: &mut VM) -> Result<(), InterpretError> {
+  println!("Welcome to RLox REPL!");
+  println!("Press Ctrl+C to exit.");
+  loop {
+    print!("> ");
+    io::stdout().flush().unwrap();
+
+    let mut line = String::new();
+    io::stdin().read_line(&mut line).unwrap();
+
+    vm.interpret_str(line.as_str())?;
+  }
+}
+
+/// Run the given file.
+fn run_file(vm: &mut VM, path: &str) -> Result<(), InterpretError> {
+  vm.interpret_file(path)
 }

@@ -38,6 +38,23 @@ pub struct VM<'a> {
 }
 
 impl<'a> VM<'a> {
+  /// Interpret from string, with no chunk delegated.
+  pub fn interpret_str(&mut self, src: &str) -> Result<(), InterpretError> {
+    self.compile(src)
+  }
+
+  /// Interpret from file(path), with no chunk delegated.
+  pub fn interpret_file(&mut self, path: &str) -> Result<(), InterpretError> {
+    use std::fs::read_to_string;
+    if let Ok(content) = read_to_string(path) {
+      self.interpret_str(content.as_str())
+    } else {
+      Err(InterpretError::CompileError)
+    }
+  }
+}
+
+impl<'a> VM<'a> {
   fn monocular_op<T>(&mut self, op: T) -> bool
   where
     T: Fn(Value) -> Value,

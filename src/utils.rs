@@ -12,13 +12,21 @@ pub trait Init: Default {
   }
 }
 
-/// Get the command line arguments
+/// Get the command line arguments (without first `root` path argument).
 ///
 /// We have to rewrite this, as [`std::env::args`]'s first argument
 /// is always the path to the executable
-pub fn get_args() -> Vec<String> {
+pub fn args_without_root() -> Vec<String> {
   use std::env::args;
   let args = args().collect::<Vec<_>>();
   let (_, args) = args.split_first().unwrap();
   args.to_vec()
+}
+
+/// Get the command line arguments (with first `root` path argument).
+///
+/// A simple wrapper for [`std::env::args`].
+pub fn args() -> Vec<String> {
+  use std::env::args;
+  args().collect::<Vec<_>>()
 }
