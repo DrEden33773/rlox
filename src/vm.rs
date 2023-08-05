@@ -8,7 +8,6 @@
 //!
 //! - executing the bytecode
 
-use lazy_static::lazy_static;
 use std::collections::VecDeque;
 
 #[cfg(feature = "debug_trace_execution")]
@@ -25,30 +24,27 @@ use crate::{
 /// during the interpretation.
 #[derive(Debug, Clone)]
 pub enum InterpretError {
-  CompileError(&'static str),
-  RuntimeError(&'static str),
+  CompileError(String),
+  RuntimeError(String),
 }
 
 /// ## VM
 ///
 /// A struct which represents the virtual machine.
 #[derive(Debug)]
-pub struct VM<'a> {
+pub struct VM {
   /// A reference to the chunk (or, None).
-  pub(crate) chunk: Option<&'a Chunk>,
+  pub(crate) chunk: Chunk,
   /// The instruction pointer (actually, the index).
   pub(crate) ip: usize,
   /// The stack of the virtual machine.
   pub(crate) stack: VecDeque<Value>,
 }
 
-impl<'a> VM<'a> {
+impl VM {
   /// Interpret from string.
-  pub fn interpret(&'a mut self, src: &str) -> Result<(), InterpretError> {
-    lazy_static! {
-      static ref CHUNK: Chunk = Chunk::init();
-    };
-    self.rebind(&CHUNK);
+  pub fn interpret(&mut self, src: &str) -> Result<(), InterpretError> {
+    self.rebind(Chunk::init());
     if let Err(InterpretError::CompileError(info)) = self.compile(src) {
       return Err(InterpretError::CompileError(info));
     }
@@ -67,13 +63,13 @@ impl<'a> VM<'a> {
       self.interpret_to_token(content.as_str())
     } else {
       Err(InterpretError::CompileError(
-        "Failed to interpret from file",
+        "Failed to interpret from file".into(),
       ))
     }
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   fn monocular_op<T>(&mut self, op: T) -> bool
   where
     T: Fn(Value) -> Value,
@@ -99,43 +95,31 @@ impl<'a> VM<'a> {
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   /// Read a byte from the chunk (update ip).
-  fn read_byte(&mut self) -> Result<u8, InterpretError> {
-    if let Some(ref chunk) = self.chunk {
-      let byte = chunk.code[self.ip];
-      self.ip += 1;
-      return Ok(byte);
-    }
-    Err(InterpretError::RuntimeError("Failed to read byte"))
+  fn read_byte(&mut self) -> u8 {
+    let byte = self.chunk.code[self.ip];
+    self.ip += 1;
+    byte
   }
 
   /// Read a constant from the chunk (update ip).
-  fn read_constant(&mut self) -> Result<Value, InterpretError> {
-    if let Some(ref chunk) = self.chunk {
-      let index = chunk.code[self.ip];
-      self.ip += 1;
-      return Ok(chunk.constants.values[index as usize]);
-    }
-    Err(InterpretError::RuntimeError("Failed to read constant"))
+  fn read_constant(&mut self) -> Value {
+    let index = self.chunk.code[self.ip];
+    self.ip += 1;
+    self.chunk.constants.values[index as usize]
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   /// Disassemble the current instruction.
   ///
   /// This function is only available when the feature
   /// `debug_trace_execution` is enabled.
   #[cfg(feature = "debug_trace_execution")]
   fn disassemble_instruction(&self) -> Result<(), InterpretError> {
-    if let Some(ref chunk) = self.chunk {
-      chunk.disassemble_instruction(self.ip);
-      Ok(())
-    } else {
-      Err(InterpretError::RuntimeError(
-        "Failed to disassemble instruction",
-      ))
-    }
+    self.chunk.disassemble_instruction(self.ip);
+    Ok(())
   }
 
   /// Trace VM's stack.
@@ -149,23 +133,25 @@ impl<'a> VM<'a> {
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   /// Link the given chunk to the virtual machine, then interpret it.
-  pub fn interpret_chunk(&mut self, chunk: &'a mut Chunk) -> Result<(), InterpretError> {
+  pub fn interpret_chunk(&mut self, chunk: Chunk) -> Result<(), InterpretError> {
     println!("-x-x-x-x- Called : Chunk Interpreter -x-x-x-x-");
-    self.chunk = Some(chunk);
+    self.chunk = chunk;
     self.ip = 0;
     if let Ok(()) = self.run() {
       println!("-x-x-x-x- End of : Chunk Interpreter -x-x-x-x-\n");
       return Ok(());
     }
-    Err(InterpretError::RuntimeError("Failed to run the chunk"))
+    Err(InterpretError::RuntimeError(
+      "Failed to run the chunk".into(),
+    ))
   }
 
   /// Run the virtual machine (with a valid chunk reference).
   pub fn run(&mut self) -> Result<(), InterpretError> {
     let mut result = Ok(());
-    while self.ip < self.chunk.as_ref().unwrap().code.len() {
+    while self.ip < self.chunk.code.len() {
       #[cfg(feature = "debug_trace_stack")]
       self.trace_stack();
       #[cfg(feature = "debug_trace_execution")]
@@ -180,9 +166,9 @@ impl<'a> VM<'a> {
 
   #[inline]
   fn run_one_step(&mut self) -> Result<(), InterpretError> {
-    let no_crush_end = match self.read_byte()?.into() {
+    let no_crush_end = match self.read_byte().into() {
       OpCode::Constant => {
-        let constant = self.read_constant()?;
+        let constant = self.read_constant();
         self.stack.push_back(constant);
         true
       }
@@ -201,16 +187,16 @@ impl<'a> VM<'a> {
     if no_crush_end {
       Ok(())
     } else {
-      Err(InterpretError::RuntimeError("Crashed"))
+      Err(InterpretError::RuntimeError("Crashed".into()))
     }
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   /// Create a new virtual machine (with no chunk linked, ip as 0).
   pub fn init() -> Self {
     Self {
-      chunk: None,
+      chunk: Chunk::default(),
       ip: 0,
       stack: VecDeque::default(),
     }
@@ -225,8 +211,8 @@ impl<'a> VM<'a> {
   }
 
   /// Rebind the virtual machine to the given chunk.
-  pub fn rebind(&mut self, chunk: &'a Chunk) {
-    self.chunk = Some(chunk);
+  pub fn rebind(&mut self, chunk: Chunk) {
+    self.chunk = chunk;
     self.ip = 0;
   }
 }

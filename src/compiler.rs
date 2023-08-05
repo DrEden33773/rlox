@@ -46,7 +46,7 @@ impl<'a> Parser<'a> {
   }
 }
 
-impl<'a> VM<'a> {
+impl VM {
   pub(crate) fn compile(&mut self, src: &str) -> Result<(), InterpretError> {
     let mut _scanner = Scanner::bind(src);
     Ok(())
