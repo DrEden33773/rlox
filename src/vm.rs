@@ -40,7 +40,7 @@ pub struct VM<'a> {
 impl<'a> VM<'a> {
   fn monocular_op<T>(&mut self, op: T) -> bool
   where
-    T: Fn(f64) -> f64,
+    T: Fn(Value) -> Value,
   {
     if let Some(value) = self.stack.pop_back() {
       self.stack.push_back(op(value));
@@ -52,7 +52,7 @@ impl<'a> VM<'a> {
 
   fn binary_op<T>(&mut self, op: T) -> bool
   where
-    T: Fn(f64, f64) -> f64,
+    T: Fn(Value, Value) -> Value,
   {
     if let (Some(b), Some(a)) = (self.stack.pop_back(), self.stack.pop_back()) {
       self.stack.push_back(op(a, b));
@@ -106,7 +106,7 @@ impl<'a> VM<'a> {
   /// `debug_trace_stack` is enabled.
   #[cfg(feature = "debug_trace_stack")]
   pub fn trace_stack(&self) {
-    print!("          ");
+    print!("        | ");
     println!("{:?}", self.stack);
   }
 }
