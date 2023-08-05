@@ -17,6 +17,11 @@ use enum_repr::EnumU8;
 #[derive(EnumU8)]
 pub enum OpCode {
   CONSTANT,
+  ADD,
+  SUBTRACT,
+  MULTIPLY,
+  DIVIDE,
+  NEGATE,
   RETURN,
 }
 

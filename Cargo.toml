@@ -7,3 +7,8 @@ edition = "2021"
 
 [dependencies]
 enum_repr = { path = "./enum_repr" }
+
+[features]
+default = ["debug_trace_execution", "debug_trace_stack"]
+debug_trace_execution = []
+debug_trace_stack = ["debug_trace_execution"]

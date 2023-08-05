@@ -46,7 +46,12 @@ impl Debug for Chunk {
     match instruction.try_into() {
       Ok(op_code) => match op_code {
         OpCode::CONSTANT => self.constant_instruction("CONSTANT", offset),
+        OpCode::NEGATE => self.simple_instruction("NEGATE", offset),
         OpCode::RETURN => self.simple_instruction("RETURN", offset),
+        OpCode::ADD => self.simple_instruction("ADD", offset),
+        OpCode::SUBTRACT => self.simple_instruction("SUBTRACT", offset),
+        OpCode::MULTIPLY => self.simple_instruction("MULTIPLY", offset),
+        OpCode::DIVIDE => self.simple_instruction("DIVIDE", offset),
       },
       _ => {
         println!("Unknown opcode {}", instruction);
