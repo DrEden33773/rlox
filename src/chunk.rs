@@ -13,7 +13,6 @@ use enum_repr::EnumU8;
 ///
 /// An enum which represents the different opcodes used in the
 /// virtual machine.
-#[repr(C)]
 #[derive(EnumU8)]
 pub enum OpCode {
   Constant,

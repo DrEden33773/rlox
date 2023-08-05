@@ -10,7 +10,6 @@ use crate::utils::{Identifier, Init};
 /// ## TokenType
 ///
 /// An enum which represents the different types of tokens.
-#[repr(C)]
 #[derive(Debug, enum_repr::EnumU8, PartialEq, Eq, Clone, Copy)]
 pub enum TokenType {
   // Single-character tokens.
