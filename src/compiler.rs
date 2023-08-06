@@ -58,6 +58,7 @@ impl Parser {
     self.error_at(true, message)
   }
 
+  #[allow(dead_code)]
   fn error(&mut self, message: String) -> Result<(), InterpretError> {
     self.error_at(false, message)
   }
@@ -117,5 +118,11 @@ impl VM {
       }
     }
     Ok(())
+  }
+}
+
+impl VM {
+  fn emit_byte(&mut self, parser: &Parser, byte: u8) {
+    self.chunk.write_chunk(byte, parser.previous.line);
   }
 }
