@@ -8,8 +8,6 @@
 //!
 //! - executing the bytecode
 
-use std::collections::VecDeque;
-
 #[cfg(feature = "debug_trace_execution")]
 use crate::debug::Debug;
 use crate::{
@@ -132,7 +130,14 @@ impl VM {
   #[cfg(feature = "debug_trace_stack")]
   pub fn trace_stack(&self) {
     print!("        | ");
-    println!("{:?}", self.stack);
+    print!("[");
+    for (i, value) in self.stack.iter().enumerate() {
+      print!("{}", value);
+      if i != self.stack.len() - 1 {
+        print!(", ");
+      }
+    }
+    println!("]")
   }
 }
 
@@ -178,7 +183,18 @@ impl VM {
         self.stack.push(constant);
         Ok(())
       }
-      OpCode::Negate => self.unary_op(|v| -v),
+      OpCode::Nil => {
+        self.stack.push(Value::nil_val());
+        Ok(())
+      }
+      OpCode::True => {
+        self.stack.push(Value::bool_val(true));
+        Ok(())
+      }
+      OpCode::False => {
+        self.stack.push(Value::bool_val(false));
+        Ok(())
+      }
       OpCode::Return => {
         if let Some(value) = self.stack.pop() {
           println!("=> {}", value);
@@ -189,6 +205,8 @@ impl VM {
       OpCode::Subtract => self.binary_op(|l, r| l - r),
       OpCode::Multiply => self.binary_op(|l, r| l * r),
       OpCode::Divide => self.binary_op(|l, r| l / r),
+      OpCode::Not => self.unary_op(|v| !v),
+      OpCode::Negate => self.unary_op(|v| -v),
     };
     if let Err(InterpretError::RuntimeError(message)) = raw_result {
       self.runtime_error(message)
@@ -200,11 +218,11 @@ impl VM {
 
 impl VM {
   pub fn runtime_error(&mut self, message: String) -> Result<(), InterpretError> {
-    // Index should be `current - 1`, as ip has increased before error occurred.
-    let inst_index = self.ip - self.chunk.code.as_ptr() as usize - 1;
+    // Index should be `ip - 1`, as ip has increased before error occurred.
+    let inst_index = self.ip - 1;
 
     let line = self.chunk.lines[inst_index];
-    let message = format!("[line {}] in script\n{}", line, message);
+    let message = format!("[line {}] in script: {}", line, message);
 
     self.stack.clear();
 

@@ -48,6 +48,19 @@ pub struct Value {
   pub(crate) val_union: ValUnion,
 }
 
+impl std::ops::Not for Value {
+  type Output = Result<Self, InterpretError>;
+  fn not(self) -> Self::Output {
+    match self.value_type {
+      ValueType::Bool => Ok(Self::bool_val(!self.as_bool())),
+      ValueType::Nil => Ok(Self::bool_val(true)),
+      ValueType::Number => Err(InterpretError::RuntimeError(
+        "Operand could only be `boolean` or `nil`.".to_owned(),
+      )),
+    }
+  }
+}
+
 impl std::ops::Neg for Value {
   type Output = Result<Self, InterpretError>;
   fn neg(self) -> Self::Output {

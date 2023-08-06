@@ -4,6 +4,9 @@
 //!
 //! - reading the source code
 //! - producing a stream of tokens.
+//!
+//! Scanner (aka. Lexer) is the first stage of the interpreter,
+//! which is also know as `front-end`.
 
 use std::hash::Hash;
 
@@ -125,15 +128,14 @@ impl Default for Scanner {
 }
 
 impl Scanner {
-  /// Try to match reserved keyword, with:
-  /// - a given `start` index
-  /// - an expected `rest` pattern
-  /// - a `candidate` token type.
-  fn check_keyword(&self, start: usize, rest: &str, candidate: TokenType) -> TokenType {
+  /// Try to match reserved keyword.
+  ///
+  /// Match `rest` and `&self.source[self.current::-len]`
+  fn check_keyword(&self, rest: &str, candidate: TokenType) -> TokenType {
     let len = rest.len();
     // 1. steps from start index to current index `should be equal to` len, or the match must failed
     // 2. if `1.` suits, then check if the rest of the source code is equal to the rest pattern
-    if self.current - start == len && &self.source[start..start + len] == rest {
+    if self.current >= len && &self.source[self.current - len..self.current] == rest {
       candidate
     } else {
       TokenType::Identifier
@@ -142,27 +144,27 @@ impl Scanner {
 
   /// Generate correct identifier token.
   fn identifier_type(&self) -> TokenType {
-    match self.source.as_bytes()[0] {
-      b'a' => self.check_keyword(1, "nd", TokenType::And),
-      b'c' => self.check_keyword(1, "lass", TokenType::Class),
-      b'e' => self.check_keyword(1, "lse", TokenType::Else),
-      b'i' => self.check_keyword(1, "f", TokenType::If),
-      b'n' => self.check_keyword(1, "il", TokenType::Nil),
-      b'o' => self.check_keyword(1, "r", TokenType::Or),
-      b'p' => self.check_keyword(1, "rint", TokenType::Print),
-      b'r' => self.check_keyword(1, "eturn", TokenType::Return),
-      b's' => self.check_keyword(1, "uper", TokenType::Super),
-      b'v' => self.check_keyword(1, "ar", TokenType::Var),
-      b'w' => self.check_keyword(1, "hile", TokenType::While),
-      b'f' if self.current - self.start > 1 => match self.source.as_bytes()[1] {
-        b'a' => self.check_keyword(2, "lse", TokenType::False),
-        b'o' => self.check_keyword(2, "r", TokenType::For),
-        b'u' => self.check_keyword(2, "n", TokenType::Fun),
+    match self.source.as_bytes()[self.start] {
+      b'a' => self.check_keyword("nd", TokenType::And),
+      b'c' => self.check_keyword("lass", TokenType::Class),
+      b'e' => self.check_keyword("lse", TokenType::Else),
+      b'i' => self.check_keyword("f", TokenType::If),
+      b'n' => self.check_keyword("il", TokenType::Nil),
+      b'o' => self.check_keyword("r", TokenType::Or),
+      b'p' => self.check_keyword("rint", TokenType::Print),
+      b'r' => self.check_keyword("eturn", TokenType::Return),
+      b's' => self.check_keyword("uper", TokenType::Super),
+      b'v' => self.check_keyword("ar", TokenType::Var),
+      b'w' => self.check_keyword("hile", TokenType::While),
+      b'f' if self.current - self.start > 1 => match self.source.as_bytes()[self.start + 1] {
+        b'a' => self.check_keyword("lse", TokenType::False),
+        b'o' => self.check_keyword("r", TokenType::For),
+        b'u' => self.check_keyword("n", TokenType::Fun),
         _ => TokenType::Identifier,
       },
-      b't' if self.current - self.start > 1 => match self.source.as_bytes()[1] {
-        b'h' => self.check_keyword(2, "is", TokenType::This),
-        b'r' => self.check_keyword(2, "ue", TokenType::True),
+      b't' if self.current - self.start > 1 => match self.source.as_bytes()[self.start + 1] {
+        b'h' => self.check_keyword("is", TokenType::This),
+        b'r' => self.check_keyword("ue", TokenType::True),
         _ => TokenType::Identifier,
       },
       _ => TokenType::Identifier,
@@ -178,7 +180,7 @@ impl Scanner {
       if self.peek() == b'\n' {
         self.line += 1;
       }
-      self.advance();
+      self.advance_char();
     }
 
     // Cannot find the closing quote.
@@ -186,24 +188,24 @@ impl Scanner {
       return self.error_token("Unterminated string.".into());
     }
 
-    self.advance();
+    self.advance_char();
     self.make_token(TokenType::String)
   }
 
   /// Make a token, specifically from `number`.
   fn number(&mut self) -> Token {
     while self.peek().is_ascii_digit() {
-      self.advance();
+      self.advance_char();
     }
 
     // Seeking for a fractional part
     if self.peek() == b'.' && self.peek_next().is_ascii_digit() {
       // Consume the "."
-      self.advance();
+      self.advance_char();
 
       // Consume the fractional part
       while self.peek().is_ascii_digit() {
-        self.advance();
+        self.advance_char();
       }
     }
 
@@ -213,7 +215,7 @@ impl Scanner {
   /// Make a token, specifically from `identifier`.
   fn identifier(&mut self) -> Token {
     while matches!(self.peek(), c if c.is_ascii_identifier() || c.is_ascii_digit()) {
-      self.advance();
+      self.advance_char();
     }
     self.make_token(self.identifier_type())
   }
@@ -251,7 +253,7 @@ impl Scanner {
       return self.make_token(TokenType::Eof);
     }
 
-    let c = self.advance();
+    let c = self.advance_char();
 
     if c.is_ascii_digit() {
       return self.number();
@@ -316,7 +318,7 @@ impl Scanner {
   }
 
   /// Get current char, then advance the scanner (one step).
-  fn advance(&mut self) -> u8 {
+  fn advance_char(&mut self) -> u8 {
     self.current += 1;
     self.source.as_bytes()[self.current - 1]
   }
@@ -356,16 +358,16 @@ impl Scanner {
       let c = self.peek();
       match c {
         b' ' | b'\r' | b'\t' => {
-          self.advance();
+          self.advance_char();
         }
         b'\n' => {
           self.line += 1;
-          self.advance();
+          self.advance_char();
         }
         b'/' => {
           if self.peek_next() == b'/' {
             while self.peek() != b'\n' && !self.is_at_end() {
-              self.advance();
+              self.advance_char();
             }
           } else {
             return;

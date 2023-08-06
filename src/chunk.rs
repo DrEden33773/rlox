@@ -16,10 +16,14 @@ use enum_repr::EnumU8;
 #[derive(EnumU8)]
 pub enum OpCode {
   Constant,
+  Nil,
+  True,
+  False,
   Add,
   Subtract,
   Multiply,
   Divide,
+  Not,
   Negate,
   Return,
 }

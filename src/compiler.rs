@@ -131,7 +131,7 @@ lazy_static! {
     ),
     (
       TokenType::Bang,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(Some(Parser::unary), None, Precedence::None)
     ),
     (
       TokenType::BangEqual,
@@ -184,12 +184,12 @@ lazy_static! {
     ),
     (
       TokenType::False,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(Some(Parser::literal), None, Precedence::None)
     ),
     (TokenType::For, ParseRule::new(None, None, Precedence::None)),
     (TokenType::Fun, ParseRule::new(None, None, Precedence::None)),
     (TokenType::If, ParseRule::new(None, None, Precedence::None)),
-    (TokenType::Nil, ParseRule::new(None, None, Precedence::None)),
+    (TokenType::Nil, ParseRule::new(Some(Parser::literal), None, Precedence::None)),
     (TokenType::Or, ParseRule::new(None, None, Precedence::None)),
     (
       TokenType::Print,
@@ -209,7 +209,7 @@ lazy_static! {
     ),
     (
       TokenType::True,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(Some(Parser::literal), None, Precedence::None)
     ),
     (TokenType::Var, ParseRule::new(None, None, Precedence::None)),
     (
@@ -275,6 +275,7 @@ impl Parser {
 
     // Emit the operator instruction
     match operator_type {
+      TokenType::Bang => self.emit_byte(OpCode::Not as u8),
       TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
       _ => Err(InterpretError::CompileError(
         "Unknown unary operator.".into(),
@@ -298,6 +299,17 @@ impl Parser {
     }
   }
 
+  fn literal(&mut self) -> Result<(), InterpretError> {
+    match self.previous.token_type {
+      TokenType::False => self.emit_byte(OpCode::False as u8),
+      TokenType::Nil => self.emit_byte(OpCode::Nil as u8),
+      TokenType::True => self.emit_byte(OpCode::True as u8),
+      _ => Err(InterpretError::CompileError(
+        "Unknown literal operator.".into(),
+      )),
+    }
+  }
+
   fn grouping(&mut self) -> Result<(), InterpretError> {
     self.expression()?;
     self.consume(
@@ -312,7 +324,7 @@ impl Parser {
   /// then parses any expression at the given precedence level or higher.
   fn parse_precedence(&mut self, precedence: Precedence) -> Result<(), InterpretError> {
     // look up `prefix parser` for the `current` token
-    self.advance()?;
+    self.advance_token()?;
     let prefix_rule = self.get_rule(self.previous.token_type).prefix;
     if prefix_rule.is_none() {
       return Err(InterpretError::CompileError("Expect expression.".into()));
@@ -322,7 +334,7 @@ impl Parser {
 
     // look for `infix parser` for the `next` token.
     while precedence <= self.get_rule(self.current.token_type).precedence {
-      self.advance()?;
+      self.advance_token()?;
       let infix_rule = self.get_rule(self.previous.token_type).infix;
       if infix_rule.is_none() {
         // no infix rule, so we are done
@@ -346,7 +358,7 @@ impl Parser {
   /// It asks the scanner for the next token and stores it for later use.
   ///
   /// Before doing that, it takes the old current token and stashes that in a previous field.
-  fn advance(&mut self) -> Result<(), InterpretError> {
+  fn advance_token(&mut self) -> Result<(), InterpretError> {
     self.previous = self.current.clone();
     loop {
       self.current = self.scanner.scan_token();
@@ -361,7 +373,7 @@ impl Parser {
   /// Try consuming current(last) token, if can't, throw error.
   fn consume(&mut self, token_type: TokenType, message: String) -> Result<(), InterpretError> {
     if self.current.token_type == token_type {
-      self.advance()?;
+      self.advance_token()?;
       Ok(())
     } else {
       self.error_at_current(message)
@@ -474,7 +486,7 @@ impl VM {
     // parse
     let mut parser = Parser::init();
     parser.scanner.rebind(src);
-    parser.advance()?;
+    parser.advance_token()?;
     parser.expression()?;
     parser.consume(TokenType::Eof, "Expect end of expression.".into())?;
     // manually end compiler
