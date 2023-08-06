@@ -1,0 +1,55 @@
+Date : 2023-08-07 03:42:04
+Directory : /home/eden/ProjectsRepo/rlox
+Total : 20 files,  1558 codes, 265 comments, 214 blanks, all 2037 lines
+
+Languages
++----------------------+------------+------------+------------+------------+------------+
+| language             | files      | code       | comment    | blank      | total      |
++----------------------+------------+------------+------------+------------+------------+
+| Rust                 |         12 |      1,425 |        259 |        186 |      1,870 |
+| TOML                 |          5 |        126 |          6 |         25 |        157 |
+| Lox                  |          2 |          4 |          0 |          0 |          4 |
+| source.markdown.math |          1 |          3 |          0 |          3 |          6 |
++----------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                     | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                        |         20 |      1,558 |        265 |        214 |      2,037 |
+| . (Files)                                                |          4 |         81 |          3 |         18 |        102 |
+| enum_repr                                                |          3 |        107 |          3 |         24 |        134 |
+| enum_repr (Files)                                        |          2 |         48 |          3 |         10 |         61 |
+| enum_repr/src                                            |          1 |         59 |          0 |         14 |         73 |
+| private                                                  |          2 |          4 |          0 |          0 |          4 |
+| private/src                                              |          2 |          4 |          0 |          0 |          4 |
+| src                                                      |          9 |      1,330 |        252 |        167 |      1,749 |
+| tests                                                    |          2 |         36 |          7 |          5 |         48 |
++----------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------+----------------------+------------+------------+------------+------------+
+| filename                                                 | language             | code       | comment    | blank      | total      |
++----------------------------------------------------------+----------------------+------------+------------+------------+------------+
+| /home/eden/ProjectsRepo/rlox/Cargo.lock                  | TOML                 |         63 |          2 |         10 |         75 |
+| /home/eden/ProjectsRepo/rlox/Cargo.toml                  | TOML                 |         14 |          1 |          4 |         19 |
+| /home/eden/ProjectsRepo/rlox/enum_repr/Cargo.lock        | TOML                 |         39 |          2 |          6 |         47 |
+| /home/eden/ProjectsRepo/rlox/enum_repr/Cargo.toml        | TOML                 |          9 |          1 |          4 |         14 |
+| /home/eden/ProjectsRepo/rlox/enum_repr/src/lib.rs        | Rust                 |         59 |          0 |         14 |         73 |
+| /home/eden/ProjectsRepo/rlox/private/src/calculator.lox  | Lox                  |          1 |          0 |          0 |          1 |
+| /home/eden/ProjectsRepo/rlox/private/src/meaningless.lox | Lox                  |          3 |          0 |          0 |          3 |
+| /home/eden/ProjectsRepo/rlox/readme.md                   | source.markdown.math |          3 |          0 |          3 |          6 |
+| /home/eden/ProjectsRepo/rlox/rustfmt.toml                | TOML                 |          1 |          0 |          1 |          2 |
+| /home/eden/ProjectsRepo/rlox/src/chunk.rs                | Rust                 |         46 |         15 |          8 |         69 |
+| /home/eden/ProjectsRepo/rlox/src/compiler.rs             | Rust                 |        402 |         88 |         38 |        528 |
+| /home/eden/ProjectsRepo/rlox/src/debug.rs                | Rust                 |         69 |         10 |         16 |         95 |
+| /home/eden/ProjectsRepo/rlox/src/lib.rs                  | Rust                 |          7 |          0 |          1 |          8 |
+| /home/eden/ProjectsRepo/rlox/src/main.rs                 | Rust                 |         34 |          2 |          7 |         43 |
+| /home/eden/ProjectsRepo/rlox/src/scanner.rs              | Rust                 |        305 |         64 |         38 |        407 |
+| /home/eden/ProjectsRepo/rlox/src/utils.rs                | Rust                 |         25 |         15 |          8 |         48 |
+| /home/eden/ProjectsRepo/rlox/src/value.rs                | Rust                 |        242 |         17 |         27 |        286 |
+| /home/eden/ProjectsRepo/rlox/src/vm.rs                   | Rust                 |        200 |         41 |         24 |        265 |
+| /home/eden/ProjectsRepo/rlox/tests/project_root_usage.rs | Rust                 |          9 |          0 |          1 |         10 |
+| /home/eden/ProjectsRepo/rlox/tests/vm_hand_compile.rs    | Rust                 |         27 |          7 |          4 |         38 |
+| Total                                                    |                      |      1,558 |        265 |        214 |      2,037 |
++----------------------------------------------------------+----------------------+------------+------------+------------+------------+
