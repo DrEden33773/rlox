@@ -4,8 +4,8 @@
 //! with it's dependent components.
 
 use crate::{
-  common::{Value, ValueArray},
   utils::Init,
+  value::{Value, ValueArray},
 };
 use enum_repr::EnumU8;
 

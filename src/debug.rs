@@ -70,7 +70,9 @@ impl Debug for Chunk {
     let index = self.code[offset + 1];
     println!(
       "{:16} {:4} '{}'",
-      name, index, self.constants.values[index as usize]
+      name,
+      index,
+      self.constants.values[index as usize].as_number()
     );
     // move 2 byte ahead
     offset + 2

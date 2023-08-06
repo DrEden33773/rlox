@@ -42,3 +42,6 @@ impl Identifier for u8 {
     matches!(self, b'a'..=b'z' | b'A'..=b'Z' | b'_')
   }
 }
+
+/// A trait which gives [`Vec`] a better ability to be used as a stack.
+pub trait StackLikedVec<T> {}

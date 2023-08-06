@@ -14,8 +14,8 @@ use std::collections::VecDeque;
 use crate::debug::Debug;
 use crate::{
   chunk::{Chunk, OpCode},
-  common::Value,
   utils::Init,
+  value::Value,
 };
 
 /// ## InterpretError
@@ -31,14 +31,14 @@ pub enum InterpretError {
 /// ## VM
 ///
 /// A struct which represents the virtual machine.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VM {
   /// A reference to the chunk (or, None).
   pub(crate) chunk: Chunk,
   /// The instruction pointer (actually, the index).
   pub(crate) ip: usize,
   /// The stack of the virtual machine.
-  pub(crate) stack: VecDeque<Value>,
+  pub(crate) stack: Vec<Value>,
 }
 
 impl VM {
@@ -68,27 +68,31 @@ impl VM {
 }
 
 impl VM {
-  fn unary_op<T>(&mut self, op: T) -> bool
+  fn unary_op<T>(&mut self, op: T) -> Result<(), InterpretError>
   where
-    T: Fn(Value) -> Value,
+    T: Fn(Value) -> Result<Value, InterpretError>,
   {
-    if let Some(value) = self.stack.pop_back() {
-      self.stack.push_back(op(value));
-      true
+    if let Some(value) = self.stack.pop() {
+      self.stack.push(op(value)?);
+      Ok(())
     } else {
-      false
+      Err(InterpretError::RuntimeError(
+        "Operate on an empty stack.".into(),
+      ))
     }
   }
 
-  fn binary_op<T>(&mut self, op: T) -> bool
+  fn binary_op<T>(&mut self, op: T) -> Result<(), InterpretError>
   where
-    T: Fn(Value, Value) -> Value,
+    T: Fn(Value, Value) -> Result<Value, InterpretError>,
   {
-    if let (Some(b), Some(a)) = (self.stack.pop_back(), self.stack.pop_back()) {
-      self.stack.push_back(op(a, b));
-      true
+    if let (Some(b), Some(a)) = (self.stack.pop(), self.stack.pop()) {
+      self.stack.push(op(a, b)?);
+      Ok(())
     } else {
-      false
+      Err(InterpretError::RuntimeError(
+        "Operate on an empty stack.".into(),
+      ))
     }
   }
 }
@@ -115,6 +119,7 @@ impl VM {
   /// This function is only available when the feature
   /// `debug_trace_execution` is enabled.
   #[cfg(feature = "debug_trace_execution")]
+  #[allow(dead_code)]
   fn disassemble_instruction(&self) -> Result<(), InterpretError> {
     self.chunk.disassemble_instruction(self.ip);
     Ok(())
@@ -167,15 +172,15 @@ impl VM {
 
   #[inline]
   fn run_one_step(&mut self) -> Result<(), InterpretError> {
-    let no_crush_end = match self.read_byte().into() {
+    let raw_result = match self.read_byte().into() {
       OpCode::Constant => {
         let constant = self.read_constant();
-        self.stack.push_back(constant);
-        true
+        self.stack.push(constant);
+        Ok(())
       }
       OpCode::Negate => self.unary_op(|v| -v),
       OpCode::Return => {
-        if let Some(value) = self.stack.pop_back() {
+        if let Some(value) = self.stack.pop() {
           println!("=> {}", value);
         }
         return Ok(());
@@ -185,13 +190,29 @@ impl VM {
       OpCode::Multiply => self.binary_op(|l, r| l * r),
       OpCode::Divide => self.binary_op(|l, r| l / r),
     };
-    if no_crush_end {
-      Ok(())
+    if let Err(InterpretError::RuntimeError(message)) = raw_result {
+      self.runtime_error(message)
     } else {
-      Err(InterpretError::RuntimeError("Crashed!".into()))
+      Ok(())
     }
   }
 }
+
+impl VM {
+  pub fn runtime_error(&mut self, message: String) -> Result<(), InterpretError> {
+    // Index should be `current - 1`, as ip has increased before error occurred.
+    let inst_index = self.ip - self.chunk.code.as_ptr() as usize - 1;
+
+    let line = self.chunk.lines[inst_index];
+    let message = format!("[line {}] in script\n{}", line, message);
+
+    self.stack.clear();
+
+    Err(InterpretError::RuntimeError(message))
+  }
+}
+
+impl Init for VM {}
 
 impl VM {
   /// Create a new virtual machine (with no chunk linked, ip as 0).
@@ -199,7 +220,7 @@ impl VM {
     Self {
       chunk: Chunk::default(),
       ip: 0,
-      stack: VecDeque::default(),
+      stack: Vec::default(),
     }
   }
 

@@ -8,9 +8,9 @@
 
 use crate::{
   chunk::{Chunk, OpCode},
-  common::Value,
   scanner::{Scanner, Token, TokenType},
   utils::Init,
+  value::Value,
   vm::{InterpretError, VM},
 };
 
@@ -260,7 +260,7 @@ impl Init for Parser {}
 impl Parser {
   fn number(&mut self) -> Result<(), InterpretError> {
     match self.previous.lexeme.parse::<f64>() {
-      Ok(value) => self.emit_constant(value),
+      Ok(value) => self.emit_constant(value.into()),
       Err(_) => Err(InterpretError::CompileError(
         "Failed to parse number(value).".into(),
       )),

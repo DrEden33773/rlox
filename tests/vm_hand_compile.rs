@@ -11,17 +11,17 @@ fn manual_demo() {
   let mut chunk = Chunk::init();
 
   // 1.2
-  let constant = chunk.add_constant(1.2);
+  let constant = chunk.add_constant(1.2.into());
   chunk.write_chunk(OpCode::Constant.into(), 123);
   chunk.write_chunk(constant as u8, 123);
   // 2.3
-  let constant = chunk.add_constant(2.3);
+  let constant = chunk.add_constant(2.3.into());
   chunk.write_chunk(OpCode::Constant.into(), 123);
   chunk.write_chunk(constant as u8, 123);
   // +
   chunk.write_chunk(OpCode::Add.into(), 123);
   // 5.6
-  let constant = chunk.add_constant(5.6);
+  let constant = chunk.add_constant(5.6.into());
   chunk.write_chunk(OpCode::Constant.into(), 123);
   chunk.write_chunk(constant as u8, 123);
   // /
