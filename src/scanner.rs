@@ -5,6 +5,8 @@
 //! - reading the source code
 //! - producing a stream of tokens.
 
+use std::hash::Hash;
+
 use crate::utils::{Identifier, Init};
 
 /// ## TokenType
@@ -61,6 +63,12 @@ pub enum TokenType {
   Eof,
 }
 
+impl Hash for TokenType {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    core::mem::discriminant(self).hash(state);
+  }
+}
+
 // TODO: Add support of `dollar` sign => "var = ${var}".
 
 /// ## Token
@@ -103,6 +111,17 @@ pub struct Scanner {
   pub(crate) current: usize,
   /// The current line.
   pub(crate) line: usize,
+}
+
+impl Default for Scanner {
+  fn default() -> Self {
+    Self {
+      source: "".to_string(),
+      start: 0,
+      current: 0,
+      line: 1,
+    }
+  }
 }
 
 impl Scanner {
@@ -361,7 +380,7 @@ impl Scanner {
 impl Scanner {
   /// Bind a new scanner to the source code.
   #[inline]
-  pub fn init(src: String) -> Self {
+  pub fn init_with(src: String) -> Self {
     Self {
       source: src,
       start: 0,
@@ -373,6 +392,13 @@ impl Scanner {
   /// Bind a new scanner to the source code.
   #[inline]
   pub fn bind(src: String) -> Self {
-    Scanner::init(src)
+    Scanner::init_with(src)
+  }
+
+  pub fn rebind(&mut self, src: String) {
+    self.source = src;
+    self.start = 0;
+    self.current = 0;
+    self.line = 1;
   }
 }

@@ -30,7 +30,11 @@ fn repl(vm: &mut VM) -> Result<(), InterpretError> {
     let mut line = String::new();
     io::stdin().read_line(&mut line).unwrap();
 
-    vm.interpret_to_token(line)?;
+    if let Err(e) = vm.interpret(line) {
+      eprintln!("{:?}", e);
+    }
+
+    println!()
   }
 }
 

@@ -61,14 +61,14 @@ impl VM {
       self.interpret_to_token(content)
     } else {
       Err(InterpretError::CompileError(
-        "Failed to interpret from file".into(),
+        "Failed to interpret from file.".into(),
       ))
     }
   }
 }
 
 impl VM {
-  fn monocular_op<T>(&mut self, op: T) -> bool
+  fn unary_op<T>(&mut self, op: T) -> bool
   where
     T: Fn(Value) -> Value,
   {
@@ -142,7 +142,7 @@ impl VM {
       return Ok(());
     }
     Err(InterpretError::RuntimeError(
-      "Failed to run the chunk".into(),
+      "Failed to run the chunk.".into(),
     ))
   }
 
@@ -170,7 +170,7 @@ impl VM {
         self.stack.push_back(constant);
         true
       }
-      OpCode::Negate => self.monocular_op(|v| -v),
+      OpCode::Negate => self.unary_op(|v| -v),
       OpCode::Return => {
         if let Some(value) = self.stack.pop_back() {
           println!("{}", value);
@@ -185,7 +185,7 @@ impl VM {
     if no_crush_end {
       Ok(())
     } else {
-      Err(InterpretError::RuntimeError("Crashed".into()))
+      Err(InterpretError::RuntimeError("Crashed!".into()))
     }
   }
 }
