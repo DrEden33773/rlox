@@ -195,18 +195,24 @@ impl VM {
         self.stack.push(Value::bool_val(false));
         Ok(())
       }
-      OpCode::Return => {
-        if let Some(value) = self.stack.pop() {
-          println!("=> {}", value);
-        }
-        return Ok(());
-      }
+      OpCode::Equal => self.binary_op(|l, r| Ok(Value::bool_val(l == r))),
+      OpCode::Greater => self.binary_op(|l, r| Ok(Value::bool_val(l > r))),
+      OpCode::Less => self.binary_op(|l, r| Ok(Value::bool_val(l < r))),
+      OpCode::NotEqual => self.binary_op(|l, r| Ok(Value::bool_val(l != r))),
+      OpCode::GreaterEqual => self.binary_op(|l, r| Ok(Value::bool_val(l >= r))),
+      OpCode::LessEqual => self.binary_op(|l, r| Ok(Value::bool_val(l <= r))),
       OpCode::Add => self.binary_op(|l, r| l + r),
       OpCode::Subtract => self.binary_op(|l, r| l - r),
       OpCode::Multiply => self.binary_op(|l, r| l * r),
       OpCode::Divide => self.binary_op(|l, r| l / r),
       OpCode::Not => self.unary_op(|v| !v),
       OpCode::Negate => self.unary_op(|v| -v),
+      OpCode::Return => {
+        if let Some(value) = self.stack.pop() {
+          println!("=> {}", value);
+        }
+        return Ok(());
+      }
     };
     if let Err(InterpretError::RuntimeError(message)) = raw_result {
       self.runtime_error(message)

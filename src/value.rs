@@ -48,6 +48,34 @@ pub struct Value {
   pub(crate) val_union: ValUnion,
 }
 
+impl PartialOrd for Value {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    if self.value_type != other.value_type {
+      None
+    } else {
+      match self.value_type {
+        ValueType::Bool => self.as_bool().partial_cmp(&other.as_bool()),
+        ValueType::Nil => Some(std::cmp::Ordering::Equal),
+        ValueType::Number => self.as_number().partial_cmp(&other.as_number()),
+      }
+    }
+  }
+}
+
+impl PartialEq for Value {
+  fn eq(&self, other: &Self) -> bool {
+    if self.value_type != other.value_type {
+      false
+    } else {
+      match self.value_type {
+        ValueType::Bool => self.as_bool() == other.as_bool(),
+        ValueType::Nil => true,
+        ValueType::Number => self.as_number() == other.as_number(),
+      }
+    }
+  }
+}
+
 impl std::ops::Not for Value {
   type Output = Result<Self, InterpretError>;
   fn not(self) -> Self::Output {

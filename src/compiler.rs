@@ -135,7 +135,7 @@ lazy_static! {
     ),
     (
       TokenType::BangEqual,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Equality)
     ),
     (
       TokenType::Equal,
@@ -143,23 +143,23 @@ lazy_static! {
     ),
     (
       TokenType::EqualEqual,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Equality)
     ),
     (
       TokenType::Greater,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Comparison)
     ),
     (
       TokenType::GreaterEqual,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Comparison)
     ),
     (
       TokenType::Less,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Comparison)
     ),
     (
       TokenType::LessEqual,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, Some(Parser::binary), Precedence::Comparison)
     ),
     (
       TokenType::Identifier,
@@ -289,6 +289,12 @@ impl Parser {
     self.parse_precedence(rule.precedence.next())?;
 
     match operator_type {
+      TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8),
+      TokenType::EqualEqual => self.emit_byte(OpCode::Equal as u8),
+      TokenType::Greater => self.emit_byte(OpCode::Greater as u8),
+      TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8),
+      TokenType::Less => self.emit_byte(OpCode::Less as u8),
+      TokenType::LessEqual => self.emit_byte(OpCode::LessEqual as u8),
       TokenType::Plus => self.emit_byte(OpCode::Add as u8),
       TokenType::Minus => self.emit_byte(OpCode::Subtract as u8),
       TokenType::Star => self.emit_byte(OpCode::Multiply as u8),
