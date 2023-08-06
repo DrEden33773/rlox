@@ -150,10 +150,13 @@ impl VM {
   pub fn run(&mut self) -> Result<(), InterpretError> {
     let mut result = Ok(());
     while self.ip < self.chunk.code.len() {
-      #[cfg(feature = "debug_trace_stack")]
-      self.trace_stack();
-      #[cfg(feature = "debug_trace_execution")]
-      self.disassemble_instruction()?;
+      #[cfg(feature = "debug_print_code")]
+      {
+        #[cfg(feature = "debug_trace_stack")]
+        self.trace_stack();
+        #[cfg(feature = "debug_trace_execution")]
+        self.disassemble_instruction()?;
+      }
       result = self.run_one_step();
       if result.is_err() {
         break;
@@ -173,7 +176,7 @@ impl VM {
       OpCode::Negate => self.unary_op(|v| -v),
       OpCode::Return => {
         if let Some(value) = self.stack.pop_back() {
-          println!("{}", value);
+          println!("=> {}", value);
         }
         return Ok(());
       }

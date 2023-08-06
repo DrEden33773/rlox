@@ -33,8 +33,6 @@ fn repl(vm: &mut VM) -> Result<(), InterpretError> {
     if let Err(e) = vm.interpret(line) {
       eprintln!("{:?}", e);
     }
-
-    println!()
   }
 }
 
