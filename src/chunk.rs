@@ -59,9 +59,9 @@ impl Chunk {
   }
 
   /// Clear the given chunk.
-  pub fn clear(&mut self) {
-    self.code.clear();
-    self.constants.clear();
+  pub fn free(&mut self) {
+    self.code.resize(0, Default::default());
+    self.constants.free();
   }
 }
 

@@ -328,8 +328,8 @@ impl ValueArray {
   }
 
   /// Clear the given value_array.
-  pub fn clear(&mut self) {
-    self.values.clear();
+  pub fn free(&mut self) {
+    self.values.resize(0, Default::default());
   }
 }
 

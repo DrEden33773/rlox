@@ -33,6 +33,10 @@ impl Table {
   pub fn remove(&mut self, key: &ObjString) -> Option<Value> {
     self.0.remove(key)
   }
+
+  pub fn free(&mut self) {
+    self.0.clear()
+  }
 }
 
 impl Init for Table {}

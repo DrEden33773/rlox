@@ -12,6 +12,7 @@
 use crate::debug::Debug;
 use crate::{
   chunk::{Chunk, OpCode},
+  table::Table,
   utils::Init,
   value::Value,
 };
@@ -37,6 +38,8 @@ pub struct VM {
   pub(crate) ip: usize,
   /// The stack of the virtual machine.
   pub(crate) stack: Vec<Value>,
+  /// TODO: Existed strings (used for intern all strings).
+  pub(crate) strings: Table,
 }
 
 impl VM {
@@ -245,12 +248,15 @@ impl VM {
       chunk: Chunk::default(),
       ip: 0,
       stack: Vec::default(),
+      strings: Table::default(),
     }
   }
 
   /// Free the chunk (if any).
   pub fn free(&mut self) {
+    self.chunk.free();
     self.stack.resize(0, Default::default());
+    self.strings.free();
   }
 
   /// Rebind the virtual machine to the given chunk.
