@@ -164,7 +164,7 @@ lazy_static! {
     ),
     (
       TokenType::Identifier,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(Some(Parser::variable), None, Precedence::None)
     ),
     (
       TokenType::String,
@@ -251,9 +251,9 @@ pub struct Parser {
   /// Previous token.
   pub(crate) previous: Token,
   // If had error.
-  // pub(crate) had_error: bool,
+  pub(crate) had_error: bool,
   // If in panic mode.
-  // pub(crate) panic_mode: bool,
+  pub(crate) panic_mode: bool,
 }
 
 impl Init for Parser {}
@@ -274,6 +274,15 @@ impl Parser {
     let obj_string = ObjString::from(rust_string);
     let obj = obj_string.cast_to_obj_ptr();
     self.emit_constant(Value::obj_val(obj))
+  }
+
+  fn named_variable(&mut self) -> Result<(), InterpretError> {
+    let arg = self.identifier_constant()?;
+    self.emit_bytes(&[OpCode::GetGlobal as u8, arg])
+  }
+
+  fn variable(&mut self) -> Result<(), InterpretError> {
+    self.named_variable()
   }
 
   fn unary(&mut self) -> Result<(), InterpretError> {
@@ -327,9 +336,9 @@ impl Parser {
 
   fn grouping(&mut self) -> Result<(), InterpretError> {
     self.expression()?;
-    self.consume(
+    self.consume_token(
       TokenType::RightParen,
-      "Expect ')' after expression.".to_owned(),
+      "Expect `)` after expression.".to_owned(),
     )
   }
 }
@@ -386,7 +395,11 @@ impl Parser {
   }
 
   /// Try consuming current(last) token, if can't, throw error.
-  fn consume(&mut self, token_type: TokenType, message: String) -> Result<(), InterpretError> {
+  fn consume_token(
+    &mut self,
+    token_type: TokenType,
+    message: String,
+  ) -> Result<(), InterpretError> {
     if self.current.token_type == token_type {
       self.advance_token()?;
       Ok(())
@@ -395,9 +408,128 @@ impl Parser {
     }
   }
 
+  /// Check if current token has the same type with expected.
+  fn check_token(&mut self, expected_type: TokenType) -> bool {
+    self.current.token_type == expected_type
+  }
+
+  /// Execute `check_token`.
+  ///
+  /// If true, advance token with true returned.
+  ///
+  /// Else, directly return false.
+  fn match_token(&mut self, expected_type: TokenType) -> Result<bool, InterpretError> {
+    if !self.check_token(expected_type) {
+      Ok(false)
+    } else {
+      self.advance_token().unwrap();
+      Ok(true)
+    }
+  }
+
   /// Parse the expression.
   fn expression(&mut self) -> Result<(), InterpretError> {
     self.parse_precedence(Precedence::Assignment)
+  }
+
+  /// Try matching current token as a declaration.
+  fn declaration(&mut self) -> Result<(), InterpretError> {
+    if self.match_token(TokenType::Var)? {
+      self.var_declaration()?;
+    } else {
+      self.statement()?;
+    }
+    if self.panic_mode {
+      self.synchronize()
+    } else {
+      Ok(())
+    }
+  }
+
+  /// Try matching current token as a statement.
+  fn statement(&mut self) -> Result<(), InterpretError> {
+    if self.match_token(TokenType::Print)? {
+      self.print_statement()
+    } else {
+      self.expression_statement()
+    }
+  }
+}
+
+impl Parser {
+  fn parse_variable(&mut self, message: String) -> Result<u8, InterpretError> {
+    self.consume_token(TokenType::Identifier, message)?;
+    self.identifier_constant()
+  }
+
+  fn define_variable(&mut self, global_index: u8) -> Result<(), InterpretError> {
+    self.emit_bytes(&[OpCode::DefineGlobal as u8, global_index])
+  }
+
+  fn identifier_constant(&mut self) -> Result<u8, InterpretError> {
+    self.make_constant(Value::obj_val(
+      ObjString::from(self.previous.lexeme.to_owned()).cast_to_obj_ptr(),
+    ))
+  }
+
+  /// Declare bind a new variable.
+  fn var_declaration(&mut self) -> Result<(), InterpretError> {
+    let global_index = self.parse_variable("Expect variable name.".into())?;
+
+    if self.match_token(TokenType::Equal)? {
+      self.expression()?;
+    } else {
+      self.emit_byte(OpCode::Nil as u8)?;
+    }
+
+    self.consume_token(
+      TokenType::Semicolon,
+      "Expect `;` after variable declaration.".into(),
+    )?;
+
+    self.define_variable(global_index)
+  }
+}
+
+impl Parser {
+  fn print_statement(&mut self) -> Result<(), InterpretError> {
+    self.expression()?;
+    self.consume_token(TokenType::Semicolon, "Expect `;` after value.".into())?;
+    self.emit_byte(OpCode::Print as u8)
+  }
+
+  /// If in panic_mode, then synchronize (for better recognizing what error has occurred).
+  ///
+  /// Synchronize means that, we will skip tokens indiscriminately
+  /// until we reach something that looks like a statement boundary.
+  ///
+  /// E.g.: class | fun | var | for | if | while | print | return
+  fn synchronize(&mut self) -> Result<(), InterpretError> {
+    self.panic_mode = false;
+    while self.current.token_type != TokenType::Eof {
+      if self.previous.token_type == TokenType::Semicolon {
+        return Ok(());
+      }
+      match self.current.token_type {
+        TokenType::Class
+        | TokenType::Fun
+        | TokenType::Var
+        | TokenType::For
+        | TokenType::If
+        | TokenType::While
+        | TokenType::Print
+        | TokenType::Return => return Ok(()),
+        _ => {}
+      }
+      self.advance_token()?;
+    }
+    Ok(())
+  }
+
+  fn expression_statement(&mut self) -> Result<(), InterpretError> {
+    self.expression()?;
+    self.consume_token(TokenType::Semicolon, "Expect `;` after expression.".into())?;
+    self.emit_byte(OpCode::Pop as u8)
   }
 }
 
@@ -472,8 +604,10 @@ impl Parser {
 
   /// Report error at selected token.
   fn error_at(&mut self, if_current: bool, message: String) -> Result<(), InterpretError> {
-    // if self.panic_mode { return Ok(()); }
-    // self.panic_mode = true;
+    if self.panic_mode {
+      return Ok(());
+    }
+    self.panic_mode = true;
     let token = if if_current {
       &self.current
     } else {
@@ -487,7 +621,7 @@ impl Parser {
       _ => error_str += &format!(" at '{}'", token.lexeme),
     }
     error_str += &format!(": {}", message);
-    // self.had_error = true;
+    self.had_error = true;
     Err(InterpretError::CompileError(error_str))
   }
 }
@@ -502,8 +636,12 @@ impl VM {
     let mut parser = Parser::init();
     parser.scanner.rebind(src);
     parser.advance_token()?;
-    parser.expression()?;
-    parser.consume(TokenType::Eof, "Expect end of expression.".into())?;
+    // TODO: Replace next 2 lines, use `declaration` instead.
+    // parser.expression()?;
+    // parser.consume_token(TokenType::Eof, "Expect end of expression.".into())?;
+    while !parser.match_token(TokenType::Eof)? {
+      parser.declaration()?;
+    }
     // manually end compiler
     parser.end_compiler()?;
     // load pre-parsed chunk into VM (link to VM)

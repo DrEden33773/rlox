@@ -40,6 +40,8 @@ pub struct VM {
   pub(crate) stack: Vec<Value>,
   /// TODO: Existed strings (used for intern all strings).
   pub(crate) strings: Table,
+  /// All globals.
+  pub(crate) globals: Table,
 }
 
 impl VM {
@@ -210,10 +212,62 @@ impl VM {
       OpCode::Divide => self.binary_op(|l, r| l / r),
       OpCode::Not => self.unary_op(|v| !v),
       OpCode::Negate => self.unary_op(|v| -v),
-      OpCode::Return => {
+      OpCode::Print => {
         if let Some(value) = self.stack.pop() {
-          println!("=> {}", value);
+          #[cfg(feature = "debug_print_code")]
+          {
+            println!("{:>7}=> {}", "", value);
+          }
+          #[cfg(not(feature = "debug_print_code"))]
+          {
+            println!("=> {}", value);
+          }
+          Ok(())
+        } else {
+          Err(InterpretError::RuntimeError(
+            "Expect a value after `print` statement.".into(),
+          ))
         }
+      }
+      OpCode::Pop => {
+        self.stack.pop();
+        Ok(())
+      }
+      OpCode::DefineGlobal => {
+        let name = self.read_constant();
+        if let Ok(name) = name.as_string() {
+          let value = self.stack.pop().unwrap();
+          self.globals.set(unsafe { name.as_ref() }.to_owned(), value);
+          Ok(())
+        } else {
+          Err(InterpretError::RuntimeError(
+            "Expect a string as global variable name.".into(),
+          ))
+        }
+      }
+      OpCode::GetGlobal => {
+        let name = self.read_constant();
+        if let Ok(name) = name.as_string() {
+          if let Some(&value) = self.globals.get(unsafe { name.as_ref() }) {
+            self.stack.push(value);
+            Ok(())
+          } else {
+            Err(InterpretError::RuntimeError(format!(
+              "Undefined variable `{}`.",
+              unsafe { name.as_ref() }
+            )))
+          }
+        } else {
+          Err(InterpretError::RuntimeError(
+            "Expect a string as global variable (receiver) name.".into(),
+          ))
+        }
+      }
+      OpCode::Return => {
+        // TODO: remove this temporary solution.
+        // if let Some(value) = self.stack.pop() {
+        //   println!("=> {}", value);
+        // }
         return Ok(());
       }
     };
@@ -243,20 +297,22 @@ impl Init for VM {}
 
 impl VM {
   /// Create a new virtual machine (with no chunk linked, ip as 0).
-  pub fn init() -> Self {
-    Self {
-      chunk: Chunk::default(),
-      ip: 0,
-      stack: Vec::default(),
-      strings: Table::default(),
-    }
-  }
+  // pub fn init() -> Self {
+  //   Self {
+  //     chunk: Chunk::default(),
+  //     ip: 0,
+  //     stack: Vec::default(),
+  //     strings: Table::default(),
+  //     globals: Table::default(),
+  //   }
+  // }
 
   /// Free the chunk (if any).
   pub fn free(&mut self) {
     self.chunk.free();
     self.stack.resize(0, Default::default());
     self.strings.free();
+    self.globals.free();
   }
 
   /// Rebind the virtual machine to the given chunk.

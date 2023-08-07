@@ -61,6 +61,10 @@ impl Debug for Chunk {
         OpCode::Divide => self.simple_instruction("@ Divide", offset),
         OpCode::Not => self.simple_instruction("@ Not", offset),
         OpCode::Negate => self.simple_instruction("@ Negate", offset),
+        OpCode::Print => self.simple_instruction("..Print", offset),
+        OpCode::Pop => self.simple_instruction("..Pop", offset),
+        OpCode::DefineGlobal => self.constant_instruction(":>DefineGlobal", offset),
+        OpCode::GetGlobal => self.constant_instruction(":>GetGlobal", offset),
         OpCode::Return => self.simple_instruction("..Return", offset),
       },
       _ => {

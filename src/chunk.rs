@@ -31,6 +31,10 @@ pub enum OpCode {
   Divide,
   Not,
   Negate,
+  Print,
+  Pop,
+  DefineGlobal,
+  GetGlobal,
   Return,
 }
 

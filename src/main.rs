@@ -1,3 +1,4 @@
+use rlox::utils::Init;
 use rlox::{utils, vm::InterpretError, vm::VM};
 use std::io::{self, Write};
 use std::process::exit;
