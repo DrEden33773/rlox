@@ -9,16 +9,16 @@
 use crate::object::{Obj, ObjString, ObjType};
 
 impl From<String> for ObjString {
-  fn from(value: String) -> Self {
+  fn from(rust_string: String) -> Self {
     Self {
       obj: Obj::new(ObjType::String),
-      data: value,
+      data: rust_string,
     }
   }
 }
 
 impl From<ObjString> for String {
-  fn from(value: ObjString) -> Self {
-    value.data
+  fn from(obj_string: ObjString) -> Self {
+    obj_string.data
   }
 }

@@ -8,7 +8,7 @@
 
 use crate::{
   chunk::{Chunk, OpCode},
-  object::{Obj, ObjString},
+  object::{ObjString, ObjTrait},
   scanner::{Scanner, Token, TokenType},
   utils::Init,
   value::Value,
@@ -269,9 +269,11 @@ impl Parser {
   }
 
   fn string(&mut self) -> Result<(), InterpretError> {
-    let rust_string = self.previous.lexeme.clone();
-    let obj_string: ObjString = rust_string.into();
-    Ok(())
+    let len = self.previous.lexeme.len();
+    let rust_string = self.previous.lexeme[1..len - 1].to_owned();
+    let obj_string = ObjString::from(rust_string);
+    let obj = obj_string.cast_to_obj_ptr();
+    self.emit_constant(Value::obj_val(obj))
   }
 
   fn unary(&mut self) -> Result<(), InterpretError> {

@@ -18,7 +18,7 @@ use crate::{object::Obj, utils::Init, vm::InterpretError};
 ///
 /// A type alias for the value used in the virtual machine.
 // pub type Value = f64;
-
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, enum_repr::EnumU8)]
 pub enum ValueType {
   Bool,
@@ -35,7 +35,7 @@ pub enum ValueType {
 pub union ValUnion {
   pub(crate) boolean: bool,
   pub(crate) number: f64,
-  pub(crate) obj: Option<NonNull<Obj>>,
+  pub(crate) obj: NonNull<Obj>,
 }
 
 impl Display for ValUnion {
@@ -58,6 +58,7 @@ impl Debug for ValUnion {
 ///
 /// - `value_type`: The type of the value.
 /// - `val_union`: The representation in memory of the value.
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Value {
   pub(crate) value_type: ValueType,
@@ -88,7 +89,7 @@ impl PartialEq for Value {
         ValueType::Bool => self.as_bool() == other.as_bool(),
         ValueType::Nil => true,
         ValueType::Number => self.as_number() == other.as_number(),
-        ValueType::Obj => todo!(),
+        ValueType::Obj => unsafe { *self.as_obj().as_ref() == *other.as_obj().as_ref() },
       }
     }
   }
@@ -175,7 +176,7 @@ impl Display for Value {
       ValueType::Bool => write!(f, "{}", self.as_bool()),
       ValueType::Nil => write!(f, "nil"),
       ValueType::Number => write!(f, "{}", self.as_number()),
-      ValueType::Obj => todo!(),
+      ValueType::Obj => write!(f, "{}", self.format_object()),
     }
   }
 }
