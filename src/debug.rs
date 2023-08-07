@@ -79,10 +79,8 @@ impl Debug for Chunk {
   fn constant_instruction(&self, name: &str, offset: usize) -> usize {
     let index = self.code[offset + 1];
     println!(
-      "{:16} {:4} '{}'",
-      name,
-      index,
-      self.constants.values[index as usize].as_number()
+      "{:16} {:4} :: {}",
+      name, index, self.constants.values[index as usize]
     );
     // move 2 byte ahead
     offset + 2

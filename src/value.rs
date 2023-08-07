@@ -12,7 +12,11 @@ use std::{
   ptr::NonNull,
 };
 
-use crate::{object::Obj, utils::Init, vm::InterpretError};
+use crate::{
+  object::{Obj, ObjString, ObjTrait},
+  utils::Init,
+  vm::InterpretError,
+};
 
 /// ## Value
 ///
@@ -110,7 +114,9 @@ impl std::ops::Not for Value {
       ValueType::Number => Err(InterpretError::RuntimeError(
         "Operand could only be `boolean` or `nil`.".to_owned(),
       )),
-      ValueType::Obj => todo!(),
+      ValueType::Obj => Err(InterpretError::RuntimeError(
+        "Operand could only be `boolean` or `nil`.".to_owned(),
+      )),
     }
   }
 }
@@ -132,9 +138,15 @@ impl std::ops::Add for Value {
   fn add(self, rhs: Self) -> Self::Output {
     if self.is_number() && rhs.is_number() {
       Ok(Value::number_val(self.as_number() + rhs.as_number()))
+    } else if self.is_string() && rhs.is_string() {
+      let lhs = self.as_rust_string().unwrap();
+      let rhs = rhs.as_rust_string().unwrap();
+      Ok(Value::obj_val(
+        ObjString::from(format!("{}{}", lhs, rhs)).cast_to_obj_ptr(),
+      ))
     } else {
       Err(InterpretError::RuntimeError(
-        "Operands must be numbers.".to_owned(),
+        "Operands must be 2 numbers or 2 strings.".to_owned(),
       ))
     }
   }

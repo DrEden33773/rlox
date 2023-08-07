@@ -44,7 +44,7 @@ pub trait ObjTrait {
 impl Value {
   pub(crate) fn format_object(&self) -> String {
     match self.obj_type().unwrap() {
-      ObjType::String => self.as_rust_string().unwrap().to_string(),
+      ObjType::String => format!("\"{}\"", self.as_rust_string().unwrap()),
     }
   }
 }
@@ -94,10 +94,8 @@ pub struct ObjString {
 
 impl ObjTrait for ObjString {
   fn cast_to_obj_ptr(self) -> NonNull<Obj> {
-    /*
-      `NonNull::from(&self).cast()` => Error!
-    */
-    NonNull::new(Box::into_raw(Box::new(self))).unwrap().cast()
+    // NonNull::from(&self).cast() /* => Error! */
+    NonNull::new(Box::into_raw(Box::new(self))).unwrap().cast() /* => Ok */
   }
 }
 
