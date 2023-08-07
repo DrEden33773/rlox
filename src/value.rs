@@ -7,9 +7,12 @@
 //!
 //! Wrappers of `Value` (e.g. `ValueArray`) are also included in this module.
 
-use std::fmt::{Debug, Display};
+use std::{
+  fmt::{Debug, Display},
+  ptr::NonNull,
+};
 
-use crate::{utils::Init, vm::InterpretError};
+use crate::{object::Obj, utils::Init, vm::InterpretError};
 
 /// ## Value
 ///
@@ -21,13 +24,18 @@ pub enum ValueType {
   Bool,
   Nil,
   Number,
+  Obj,
 }
 
+/// ## Value Union
+///
+/// A union which holds all possible representation of a value.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union ValUnion {
   pub(crate) boolean: bool,
   pub(crate) number: f64,
+  pub(crate) obj: Option<NonNull<Obj>>,
 }
 
 impl Display for ValUnion {
@@ -42,6 +50,14 @@ impl Debug for ValUnion {
   }
 }
 
+/// ## Value
+///
+/// A type which represents the value used in the virtual machine.
+///
+/// It contains:
+///
+/// - `value_type`: The type of the value.
+/// - `val_union`: The representation in memory of the value.
 #[derive(Debug, Clone, Copy)]
 pub struct Value {
   pub(crate) value_type: ValueType,
@@ -57,6 +73,7 @@ impl PartialOrd for Value {
         ValueType::Bool => self.as_bool().partial_cmp(&other.as_bool()),
         ValueType::Nil => Some(std::cmp::Ordering::Equal),
         ValueType::Number => self.as_number().partial_cmp(&other.as_number()),
+        ValueType::Obj => todo!(),
       }
     }
   }
@@ -71,6 +88,7 @@ impl PartialEq for Value {
         ValueType::Bool => self.as_bool() == other.as_bool(),
         ValueType::Nil => true,
         ValueType::Number => self.as_number() == other.as_number(),
+        ValueType::Obj => todo!(),
       }
     }
   }
@@ -85,6 +103,7 @@ impl std::ops::Not for Value {
       ValueType::Number => Err(InterpretError::RuntimeError(
         "Operand could only be `boolean` or `nil`.".to_owned(),
       )),
+      ValueType::Obj => todo!(),
     }
   }
 }
@@ -156,6 +175,7 @@ impl Display for Value {
       ValueType::Bool => write!(f, "{}", self.as_bool()),
       ValueType::Nil => write!(f, "nil"),
       ValueType::Number => write!(f, "{}", self.as_number()),
+      ValueType::Obj => todo!(),
     }
   }
 }

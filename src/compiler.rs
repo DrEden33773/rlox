@@ -8,6 +8,7 @@
 
 use crate::{
   chunk::{Chunk, OpCode},
+  object::{Obj, ObjString},
   scanner::{Scanner, Token, TokenType},
   utils::Init,
   value::Value,
@@ -167,7 +168,7 @@ lazy_static! {
     ),
     (
       TokenType::String,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(Some(Parser::string), None, Precedence::None)
     ),
     (
       TokenType::Number,
@@ -265,6 +266,12 @@ impl Parser {
         "Failed to parse number(value).".into(),
       )),
     }
+  }
+
+  fn string(&mut self) -> Result<(), InterpretError> {
+    let rust_string = self.previous.lexeme.clone();
+    let obj_string: ObjString = rust_string.into();
+    Ok(())
   }
 
   fn unary(&mut self) -> Result<(), InterpretError> {
