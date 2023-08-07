@@ -250,10 +250,7 @@ impl VM {
 
   /// Free the chunk (if any).
   pub fn free(&mut self) {
-    // if let Some(ref mut chunk) = self.chunk {
-    //   chunk.clear();
-    // }
-    self.stack.clear();
+    self.stack.resize(0, Default::default());
   }
 
   /// Rebind the virtual machine to the given chunk.

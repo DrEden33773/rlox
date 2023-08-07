@@ -20,10 +20,16 @@ pub enum ObjType {
   String,
 }
 
+impl Default for ObjType {
+  fn default() -> Self {
+    Self::String
+  }
+}
+
 /// ## Object
 ///
 /// The meta type of all `objects` in the virtual machine.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub struct Obj {
   pub(crate) obj_type: ObjType,
 }
@@ -86,10 +92,27 @@ impl Value {
 ///
 /// The type of the string object.
 #[repr(C)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjString {
   pub(crate) obj: Obj,
   pub(crate) data: String,
+  pub(crate) hash: usize,
+}
+
+impl ObjString {
+  pub fn is_empty(&self) -> bool {
+    self.data.is_empty()
+  }
+}
+
+impl Default for ObjString {
+  fn default() -> Self {
+    Self {
+      obj: Obj::new(ObjType::String),
+      data: String::default(),
+      hash: 0,
+    }
+  }
 }
 
 impl ObjTrait for ObjString {

@@ -30,6 +30,12 @@ pub enum ValueType {
   Obj,
 }
 
+impl Default for ValueType {
+  fn default() -> Self {
+    Self::Nil
+  }
+}
+
 /// ## Value Union
 ///
 /// A union which holds all possible representation of a value.
@@ -38,6 +44,12 @@ pub union ValUnion {
   pub(crate) boolean: bool,
   pub(crate) number: f64,
   pub(crate) obj: NonNull<Obj>,
+}
+
+impl Default for ValUnion {
+  fn default() -> Self {
+    Self { number: 0.0 }
+  }
 }
 
 impl Display for ValUnion {
@@ -61,7 +73,7 @@ impl Debug for ValUnion {
 /// - `value_type`: The type of the value.
 /// - `val_union`: The representation in memory of the value.
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Value {
   pub(crate) value_type: ValueType,
   pub(crate) val_union: ValUnion,
