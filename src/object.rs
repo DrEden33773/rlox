@@ -15,7 +15,6 @@ use std::{
 /// ## Object Type
 ///
 /// An enum which represents the type of the object.
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObjType {
   String,
@@ -24,7 +23,6 @@ pub enum ObjType {
 /// ## Object
 ///
 /// The meta type of all `objects` in the virtual machine.
-#[repr(C)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Obj {
   pub(crate) obj_type: ObjType,
@@ -96,6 +94,9 @@ pub struct ObjString {
 
 impl ObjTrait for ObjString {
   fn cast_to_obj_ptr(self) -> NonNull<Obj> {
+    /*
+      `NonNull::from(&self).cast()` => Error!
+    */
     NonNull::new(Box::into_raw(Box::new(self))).unwrap().cast()
   }
 }

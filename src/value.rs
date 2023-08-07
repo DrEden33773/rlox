@@ -18,7 +18,6 @@ use crate::{object::Obj, utils::Init, vm::InterpretError};
 ///
 /// A type alias for the value used in the virtual machine.
 // pub type Value = f64;
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, enum_repr::EnumU8)]
 pub enum ValueType {
   Bool,
@@ -30,7 +29,6 @@ pub enum ValueType {
 /// ## Value Union
 ///
 /// A union which holds all possible representation of a value.
-#[repr(C)]
 #[derive(Clone, Copy)]
 pub union ValUnion {
   pub(crate) boolean: bool,
@@ -74,7 +72,11 @@ impl PartialOrd for Value {
         ValueType::Bool => self.as_bool().partial_cmp(&other.as_bool()),
         ValueType::Nil => Some(std::cmp::Ordering::Equal),
         ValueType::Number => self.as_number().partial_cmp(&other.as_number()),
-        ValueType::Obj => todo!(),
+        ValueType::Obj => {
+          let lhs = self.as_rust_string().unwrap();
+          let rhs = other.as_rust_string().unwrap();
+          (*lhs).partial_cmp(rhs)
+        }
       }
     }
   }
@@ -89,7 +91,11 @@ impl PartialEq for Value {
         ValueType::Bool => self.as_bool() == other.as_bool(),
         ValueType::Nil => true,
         ValueType::Number => self.as_number() == other.as_number(),
-        ValueType::Obj => unsafe { *self.as_obj().as_ref() == *other.as_obj().as_ref() },
+        ValueType::Obj => {
+          let lhs = self.as_rust_string().unwrap();
+          let rhs = other.as_rust_string().unwrap();
+          *lhs == *rhs
+        }
       }
     }
   }
