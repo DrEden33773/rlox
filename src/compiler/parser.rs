@@ -507,7 +507,8 @@ impl Parser {
 impl Parser {
   fn parse_variable(&mut self, message: String) -> Result<u8, InterpretError> {
     self.consume_token(TokenType::Identifier, message)?;
-    // declare on variable
+
+    // record if it's a local variable (scope_depth > 0)
     self.declare_variable()?;
 
     // if in local scope, simply exit (with a fake index)
@@ -531,6 +532,7 @@ impl Parser {
     }
   }
 
+  /// Records the existence of variable (only for locals).
   fn declare_variable(&mut self) -> Result<(), InterpretError> {
     if self.compiler.scope_depth == 0 {
       return Ok(());
@@ -591,18 +593,15 @@ impl Parser {
       .position(|local| local.name.lexeme == self.previous.lexeme);
     if let Some(pos) = pos {
       if !self.compiler.locals[pos].is_captured {
-        Err(InterpretError::CompileError(
+        return Err(InterpretError::CompileError(
           "Can't read local variable in its own initializer.".into(),
-        ))
-      } else {
-        Ok(Some(pos))
-      }
-    } else {
-      Ok(pos)
+        ));
+      };
     }
+    Ok(pos)
   }
 
-  /// Declare bind a new variable.
+  /// Declare: bind a new variable.
   fn var_declaration(&mut self) -> Result<(), InterpretError> {
     let global_index = self.parse_variable("Expect variable name.".into())?;
 
