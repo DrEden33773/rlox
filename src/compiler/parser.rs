@@ -347,7 +347,7 @@ impl Parser {
   fn end_scope(&mut self) -> Result<(), InterpretError> {
     self.compiler.scope_depth -= 1;
     while self.compiler.local_count > 0
-      && self.compiler.locals.last().unwrap().depth > self.compiler.scope_depth
+      && self.compiler.locals[self.compiler.local_count - 1].depth > self.compiler.scope_depth
     {
       // lifetime of local variable ends here, call pop instruction
       self.emit_byte(OpCode::Pop as u8)?;

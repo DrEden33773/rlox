@@ -16,7 +16,7 @@ impl Parser {
   }
 
   fn mark_initialized(&mut self) {
-    self.compiler.locals.last_mut().unwrap().is_captured = true;
+    self.compiler.locals[self.compiler.local_count - 1].is_initialized = true;
   }
 
   fn define_variable(&mut self, global_index: u8) -> Result<(), InterpretError> {
@@ -36,17 +36,12 @@ impl Parser {
 
     // Detect error => two variables with same name
     // in the same local scope.
-    for local in self
-      .compiler
-      .locals
-      .iter()
-      .rev()
-      .take(self.compiler.local_count)
-    {
-      if local.depth < self.compiler.scope_depth {
+    for i in (0..self.compiler.local_count).rev() {
+      let local = &self.compiler.locals[i];
+      if local.is_initialized && local.depth < self.compiler.scope_depth {
         break;
       }
-      if local.name.lexeme == self.previous.lexeme {
+      if self.previous.lexeme == local.name.lexeme {
         return Err(InterpretError::CompileError(
           "Already a variable with this name in this scope.".into(),
         ));
@@ -57,16 +52,15 @@ impl Parser {
   }
 
   fn add_local(&mut self) -> Result<(), InterpretError> {
-    if self.compiler.local_count > u8::MAX as usize + 1 {
+    if self.compiler.local_count > u8::MAX as usize {
       return Err(InterpretError::CompileError(
         "Too many local variables in function(At most: 256).".into(),
       ));
     }
-    self.compiler.locals.push(Local {
-      depth: self.compiler.scope_depth,
-      name: self.previous.to_owned(),
-      is_captured: false,
-    });
+    let local = &mut self.compiler.locals[self.compiler.local_count];
+    local.name = self.previous.to_owned();
+    local.depth = self.compiler.scope_depth;
+    local.is_initialized = false;
     self.compiler.local_count += 1;
     Ok(())
   }
@@ -81,14 +75,11 @@ impl Parser {
   ///
   /// If find, return the index of the local variable.
   pub(crate) fn resolve_local(&mut self) -> Result<Option<usize>, InterpretError> {
-    let pos = self
-      .compiler
-      .locals
+    let pos = self.compiler.locals[..self.compiler.local_count]
       .iter()
-      .take(self.compiler.local_count)
       .position(|local| local.name.lexeme == self.previous.lexeme);
     if let Some(pos) = pos {
-      if !self.compiler.locals[pos].is_captured {
+      if !self.compiler.locals[pos].is_initialized {
         return Err(InterpretError::CompileError(
           "Can't read local variable in its own initializer.".into(),
         ));

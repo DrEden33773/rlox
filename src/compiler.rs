@@ -63,8 +63,7 @@ pub struct Local {
   /// The depth of the local variable.
   pub(crate) depth: usize,
   /// If the bind of local variable initialized.
-  /// Or to say, if local variable have captured a assignable value.
-  pub(crate) is_captured: bool,
+  pub(crate) is_initialized: bool,
 }
 
 /// ## Compiler
@@ -72,7 +71,7 @@ pub struct Local {
 /// A struct which represents the compiler.
 ///
 /// Mainly deal with `local variables` via a flat array of all locals.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Compiler {
   /// Represents all locals.
   pub(crate) locals: Vec<Local>,
@@ -81,6 +80,16 @@ pub struct Compiler {
   pub(crate) local_count: usize,
   /// Tracks the number of blocks surrounding the current bit of code
   pub(crate) scope_depth: usize,
+}
+
+impl Default for Compiler {
+  fn default() -> Self {
+    Self {
+      locals: vec![Local::default(); u8::MAX as usize + 1],
+      local_count: 0,
+      scope_depth: 0,
+    }
+  }
 }
 
 impl Init for Compiler {}
