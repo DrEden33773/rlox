@@ -19,6 +19,9 @@ pub trait Debug {
 
   /// Get the line number of the given offset.
   fn line_number(&self, offset: usize) -> usize;
+
+  /// Print a byte instruction (mainly used for local_variables).
+  fn byte_instruction(&self, name: &str, offset: usize) -> usize;
 }
 
 impl Debug for Chunk {
@@ -63,9 +66,11 @@ impl Debug for Chunk {
         OpCode::Negate => self.simple_instruction("@ Negate", offset),
         OpCode::Print => self.simple_instruction("..Print", offset),
         OpCode::Pop => self.simple_instruction("..Pop", offset),
-        OpCode::DefineGlobal => self.constant_instruction(":>DefineGlobal", offset),
-        OpCode::GetGlobal => self.constant_instruction(":>GetGlobal", offset),
-        OpCode::SetGlobal => self.constant_instruction(":>SetGlobal", offset),
+        OpCode::DefineGlobal => self.byte_instruction(":=DefineGlobal", offset),
+        OpCode::GetGlobal => self.byte_instruction("<-GetGlobal", offset),
+        OpCode::GetLocal => self.byte_instruction("<-GetLocal", offset),
+        OpCode::SetGlobal => self.byte_instruction("->SetGlobal", offset),
+        OpCode::SetLocal => self.byte_instruction("->SetLocal", offset),
         OpCode::Return => self.simple_instruction("..Return", offset),
       },
       _ => {
@@ -87,6 +92,13 @@ impl Debug for Chunk {
       "{:16} {:4} :: {}",
       name, index, self.constants.values[index as usize]
     );
+    // move 2 byte ahead
+    offset + 2
+  }
+
+  fn byte_instruction(&self, name: &str, offset: usize) -> usize {
+    let slot = self.code[offset + 1];
+    println!("{:16} {:4}(slot)", name, slot);
     // move 2 byte ahead
     offset + 2
   }

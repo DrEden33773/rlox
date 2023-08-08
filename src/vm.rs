@@ -256,6 +256,18 @@ impl VM {
           ))
         }
       }
+      OpCode::GetLocal => {
+        let slot = self.read_byte();
+        if let Some(value) = self.stack.get(slot as usize) {
+          self.stack.push(value.to_owned());
+          Ok(())
+        } else {
+          Err(InterpretError::RuntimeError(format!(
+            "Undefined local variable at slot `{}`.",
+            slot
+          )))
+        }
+      }
       OpCode::SetGlobal => {
         let name = self.read_constant();
         if let Ok(name) = name.as_string() {
@@ -281,11 +293,20 @@ impl VM {
           ))
         }
       }
+      OpCode::SetLocal => {
+        let slot = self.read_byte();
+        let top = *self.stack.last().unwrap();
+        if let Some(value) = self.stack.get_mut(slot as usize) {
+          *value = top;
+          Ok(())
+        } else {
+          Err(InterpretError::RuntimeError(format!(
+            "Undefined local variable at slot `{}`.",
+            slot
+          )))
+        }
+      }
       OpCode::Return => {
-        // TODO: remove this temporary solution.
-        // if let Some(value) = self.stack.pop() {
-        //   println!("=> {}", value);
-        // }
         return Ok(());
       }
     };

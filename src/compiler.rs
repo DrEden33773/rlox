@@ -7,7 +7,7 @@
 //! It is responsible for executing the bytecode.
 
 use crate::{
-  scanner::{Scanner, TokenType},
+  scanner::{Scanner, Token, TokenType},
   utils::Init,
   vm::{InterpretError, VM},
 };
@@ -52,6 +52,35 @@ impl Default for Precedence {
     Self::None
   }
 }
+
+/// ## Local
+///
+/// A struct which represents a local variable.
+#[derive(Debug, Default, Clone)]
+pub struct Local {
+  /// The name of the local variable.
+  pub(crate) name: Token,
+  /// The depth of the local variable.
+  pub(crate) depth: usize,
+}
+
+/// ## Compiler
+///
+/// A struct which represents the compiler.
+///
+/// Mainly deal with `local variables` via a flat array of all locals.
+#[derive(Debug, Clone, Default)]
+pub struct Compiler {
+  /// Represents all locals.
+  pub(crate) locals: Vec<Local>,
+  /// Tracks how many locals are in scope.
+  /// Or to say, track how many of those array slots are in use.
+  pub(crate) local_count: usize,
+  /// Tracks the number of blocks surrounding the current bit of code
+  pub(crate) scope_depth: usize,
+}
+
+impl Init for Compiler {}
 
 impl VM {
   /// This function will compile the source code into bytecode.

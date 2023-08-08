@@ -12,8 +12,10 @@ use crate::{
   vm::InterpretError,
 };
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
+
+use super::{Compiler, Local};
 
 type ParseFn = fn(&mut Parser, bool) -> Result<(), InterpretError>;
 
@@ -41,163 +43,168 @@ impl ParseRule {
   }
 }
 
-lazy_static! {
-  /// ## RULES_VEC
-  ///
-  /// A vec which contains the rules for the different tokens.
-  ///
-  /// Initialized by lazy_static!.
-  static ref RULES_VEC: Vec<(TokenType, ParseRule)> = vec![
+/// ## RULES_VEC
+///
+/// A vec which contains the rules for the different tokens.
+///
+/// Initialized by lazy_static!.
+static RULES_VEC: Lazy<Vec<(TokenType, ParseRule)>> = Lazy::new(|| {
+  vec![
     (
       TokenType::LeftParen,
-      ParseRule::new(Some(Parser::grouping_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::grouping_adapter), None, Precedence::None),
     ),
     (
       TokenType::RightParen,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::LeftBrace,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::RightBrace,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Comma,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (TokenType::Dot, ParseRule::new(None, None, Precedence::None)),
     (
       TokenType::Minus,
-      ParseRule::new(Some(Parser::unary_adapter), Some(Parser::binary_adapter), Precedence::Term)
+      ParseRule::new(
+        Some(Parser::unary_adapter),
+        Some(Parser::binary_adapter),
+        Precedence::Term,
+      ),
     ),
     (
       TokenType::Plus,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Term)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Term),
     ),
     (
       TokenType::Semicolon,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Slash,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Factor)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Factor),
     ),
     (
       TokenType::Star,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Factor)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Factor),
     ),
     (
       TokenType::Bang,
-      ParseRule::new(Some(Parser::unary_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::unary_adapter), None, Precedence::None),
     ),
     (
       TokenType::BangEqual,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Equality)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Equality),
     ),
     (
       TokenType::Equal,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::EqualEqual,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Equality)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Equality),
     ),
     (
       TokenType::Greater,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison),
     ),
     (
       TokenType::GreaterEqual,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison),
     ),
     (
       TokenType::Less,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison),
     ),
     (
       TokenType::LessEqual,
-      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison)
+      ParseRule::new(None, Some(Parser::binary_adapter), Precedence::Comparison),
     ),
     (
       TokenType::Identifier,
-      ParseRule::new(Some(Parser::variable), None, Precedence::None)
+      ParseRule::new(Some(Parser::variable), None, Precedence::None),
     ),
     (
       TokenType::String,
-      ParseRule::new(Some(Parser::string_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::string_adapter), None, Precedence::None),
     ),
     (
       TokenType::Number,
-      ParseRule::new(Some(Parser::number_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::number_adapter), None, Precedence::None),
     ),
     (TokenType::And, ParseRule::new(None, None, Precedence::None)),
     (
       TokenType::Class,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Else,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::False,
-      ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None),
     ),
     (TokenType::For, ParseRule::new(None, None, Precedence::None)),
     (TokenType::Fun, ParseRule::new(None, None, Precedence::None)),
     (TokenType::If, ParseRule::new(None, None, Precedence::None)),
-    (TokenType::Nil, ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None)),
+    (
+      TokenType::Nil,
+      ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None),
+    ),
     (TokenType::Or, ParseRule::new(None, None, Precedence::None)),
     (
       TokenType::Print,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Return,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Super,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::This,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::True,
-      ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None)
+      ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None),
     ),
     (TokenType::Var, ParseRule::new(None, None, Precedence::None)),
     (
       TokenType::While,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (
       TokenType::Error,
-      ParseRule::new(None, None, Precedence::None)
+      ParseRule::new(None, None, Precedence::None),
     ),
     (TokenType::Eof, ParseRule::new(None, None, Precedence::None)),
-  ];
-}
+  ]
+});
 
-lazy_static! {
-  /// ## RULES
-  ///
-  /// HashMap form of `RULES_VEC`
-  ///
-  /// Initialized by lazy_static!.
-  static ref RULES: HashMap<TokenType, ParseRule> = {
-    let mut map = HashMap::new();
-    for (token_type, rule) in RULES_VEC.iter() {
-      map.insert(*token_type, *rule);
-    }
-    map
-  };
-}
+/// ## RULES
+///
+/// HashMap form of `RULES_VEC`
+///
+/// Initialized by lazy_static!.
+static RULES: Lazy<HashMap<TokenType, ParseRule>> = Lazy::new(|| {
+  let mut map = HashMap::new();
+  for (token_type, rule) in RULES_VEC.iter() {
+    map.insert(*token_type, *rule);
+  }
+  map
+});
 
 #[derive(Default)]
 pub struct Parser {
@@ -209,10 +216,12 @@ pub struct Parser {
   pub(crate) current: Token,
   /// Previous token.
   pub(crate) previous: Token,
-  // If had error.
+  /// If had error.
   pub(crate) had_error: bool,
-  // If in panic mode.
+  /// If in panic mode.
   pub(crate) panic_mode: bool,
+  /// Compiler => handle local variables
+  pub(crate) compiler: Compiler,
 }
 
 impl Init for Parser {}
@@ -244,12 +253,21 @@ impl Parser {
   }
 
   fn named_variable(&mut self, can_assign: bool) -> Result<(), InterpretError> {
-    let arg = self.identifier_constant()?;
+    let arg = self.resolve_local();
+    let (arg, get_op, set_op) = if let Some(arg) = arg {
+      (arg as u8, OpCode::GetLocal, OpCode::SetLocal)
+    } else {
+      (
+        self.identifier_constant()?,
+        OpCode::GetGlobal,
+        OpCode::SetGlobal,
+      )
+    };
     if can_assign && self.match_token(TokenType::Equal)? {
       self.expression()?;
-      self.emit_bytes(&[OpCode::SetGlobal as u8, arg])
+      self.emit_bytes(&[set_op as u8, arg])
     } else {
-      self.emit_bytes(&[OpCode::GetGlobal as u8, arg])
+      self.emit_bytes(&[get_op as u8, arg])
     }
   }
 
@@ -431,6 +449,31 @@ impl Parser {
     self.parse_precedence(Precedence::Assignment)
   }
 
+  /// Step into a block
+  fn begin_scope(&mut self) {
+    self.compiler.scope_depth += 1;
+  }
+
+  /// Step out of a block
+  fn end_scope(&mut self) -> Result<(), InterpretError> {
+    self.compiler.scope_depth -= 1;
+    while self.compiler.local_count > 0
+      && self.compiler.locals.last().unwrap().depth > self.compiler.scope_depth
+    {
+      self.emit_byte(OpCode::Pop as u8)?;
+      self.compiler.local_count -= 1;
+    }
+    Ok(())
+  }
+
+  /// Parse contents in a block
+  fn block(&mut self) -> Result<(), InterpretError> {
+    while !self.check_token(TokenType::RightBrace) && !self.check_token(TokenType::Eof) {
+      self.declaration()?;
+    }
+    self.consume_token(TokenType::RightBrace, "Expect `}` after block.".into())
+  }
+
   /// Try matching current token as a declaration.
   pub(crate) fn declaration(&mut self) -> Result<(), InterpretError> {
     if self.match_token(TokenType::Var)? {
@@ -449,6 +492,11 @@ impl Parser {
   fn statement(&mut self) -> Result<(), InterpretError> {
     if self.match_token(TokenType::Print)? {
       self.print_statement()
+    } else if self.match_token(TokenType::LeftBrace)? {
+      self.begin_scope();
+      self.block()?;
+      self.end_scope()?;
+      Ok(())
     } else {
       self.expression_statement()
     }
@@ -458,17 +506,82 @@ impl Parser {
 impl Parser {
   fn parse_variable(&mut self, message: String) -> Result<u8, InterpretError> {
     self.consume_token(TokenType::Identifier, message)?;
+    // declare on variable
+    self.declare_variable()?;
+
+    // if in local scope, simply exit (with a fake index)
+    if self.compiler.scope_depth > 0 {
+      return Ok(0);
+    }
+
     self.identifier_constant()
   }
 
   fn define_variable(&mut self, global_index: u8) -> Result<(), InterpretError> {
-    self.emit_bytes(&[OpCode::DefineGlobal as u8, global_index])
+    if self.compiler.scope_depth > 0 {
+      Ok(())
+    } else {
+      self.emit_bytes(&[OpCode::DefineGlobal as u8, global_index])
+    }
+  }
+
+  fn declare_variable(&mut self) -> Result<(), InterpretError> {
+    if self.compiler.scope_depth == 0 {
+      return Ok(());
+    }
+
+    // Detect error => two variables with the same name in the same local scope.
+    for local in self
+      .compiler
+      .locals
+      .iter()
+      .rev()
+      .take(self.compiler.local_count)
+    {
+      if local.depth < self.compiler.scope_depth {
+        break;
+      }
+      if local.name.lexeme == self.previous.lexeme {
+        return Err(InterpretError::CompileError(
+          "Already a variable with this name in this scope.".into(),
+        ));
+      }
+    }
+
+    self.add_local()
   }
 
   fn identifier_constant(&mut self) -> Result<u8, InterpretError> {
     self.make_constant(Value::obj_val(
       ObjString::from(self.previous.lexeme.to_owned()).cast_to_obj_ptr(),
     ))
+  }
+
+  fn add_local(&mut self) -> Result<(), InterpretError> {
+    if self.compiler.local_count > u8::MAX as usize + 1 {
+      return Err(InterpretError::CompileError(
+        "Too many local variables in function(At most: 256).".into(),
+      ));
+    }
+    self.compiler.locals.push(Local {
+      depth: self.compiler.scope_depth,
+      name: self.previous.to_owned(),
+    });
+    self.compiler.local_count += 1;
+    Ok(())
+  }
+
+  /// Try to find the local variable in the current scope.
+  ///
+  /// If find, return the index of the local variable.
+  fn resolve_local(&mut self) -> Option<usize> {
+    let pos = self
+      .compiler
+      .locals
+      .iter()
+      .take(self.compiler.local_count)
+      .position(|local| local.name.lexeme == self.previous.lexeme);
+    pos
   }
 
   /// Declare bind a new variable.
