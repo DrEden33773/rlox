@@ -214,14 +214,7 @@ impl VM {
       OpCode::Negate => self.unary_op(|v| -v),
       OpCode::Print => {
         if let Some(value) = self.stack.pop() {
-          #[cfg(feature = "debug_print_code")]
-          {
-            println!("{:>7}=> {}", "", value);
-          }
-          #[cfg(not(feature = "debug_print_code"))]
-          {
-            println!("=> {}", value);
-          }
+          println!("StdOut => {}", value);
           Ok(())
         } else {
           Err(InterpretError::RuntimeError(
@@ -259,7 +252,32 @@ impl VM {
           }
         } else {
           Err(InterpretError::RuntimeError(
-            "Expect a string as global variable (receiver) name.".into(),
+            "Expect a string as global variable name.".into(),
+          ))
+        }
+      }
+      OpCode::SetGlobal => {
+        let name = self.read_constant();
+        if let Ok(name) = name.as_string() {
+          if self
+            .globals
+            .set(
+              unsafe { name.as_ref().to_owned() },
+              self.stack.last().unwrap().to_owned(),
+            )
+            .is_none()
+          {
+            self.globals.remove(unsafe { name.as_ref() });
+            Err(InterpretError::RuntimeError(format!(
+              "Undefined variable `{}`.",
+              unsafe { name.as_ref() }
+            )))
+          } else {
+            Ok(())
+          }
+        } else {
+          Err(InterpretError::RuntimeError(
+            "Expect a string as global variable name.".into(),
           ))
         }
       }

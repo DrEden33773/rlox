@@ -65,6 +65,7 @@ impl Debug for Chunk {
         OpCode::Pop => self.simple_instruction("..Pop", offset),
         OpCode::DefineGlobal => self.constant_instruction(":>DefineGlobal", offset),
         OpCode::GetGlobal => self.constant_instruction(":>GetGlobal", offset),
+        OpCode::SetGlobal => self.constant_instruction(":>SetGlobal", offset),
         OpCode::Return => self.simple_instruction("..Return", offset),
       },
       _ => {
