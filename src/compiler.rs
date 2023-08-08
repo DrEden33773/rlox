@@ -62,6 +62,9 @@ pub struct Local {
   pub(crate) name: Token,
   /// The depth of the local variable.
   pub(crate) depth: usize,
+  /// If the bind of local variable initialized.
+  /// Or to say, if local variable have captured a assignable value.
+  pub(crate) is_captured: bool,
 }
 
 /// ## Compiler

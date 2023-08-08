@@ -253,7 +253,7 @@ impl Parser {
   }
 
   fn named_variable(&mut self, can_assign: bool) -> Result<(), InterpretError> {
-    let arg = self.resolve_local();
+    let arg = self.resolve_local()?;
     let (arg, get_op, set_op) = if let Some(arg) = arg {
       (arg as u8, OpCode::GetLocal, OpCode::SetLocal)
     } else {
@@ -460,6 +460,7 @@ impl Parser {
     while self.compiler.local_count > 0
       && self.compiler.locals.last().unwrap().depth > self.compiler.scope_depth
     {
+      // lifetime of local variable ends here, call pop instruction
       self.emit_byte(OpCode::Pop as u8)?;
       self.compiler.local_count -= 1;
     }
@@ -517,8 +518,13 @@ impl Parser {
     self.identifier_constant()
   }
 
+  fn mark_initialized(&mut self) {
+    self.compiler.locals.last_mut().unwrap().is_captured = true;
+  }
+
   fn define_variable(&mut self, global_index: u8) -> Result<(), InterpretError> {
     if self.compiler.scope_depth > 0 {
+      self.mark_initialized();
       Ok(())
     } else {
       self.emit_bytes(&[OpCode::DefineGlobal as u8, global_index])
@@ -530,7 +536,8 @@ impl Parser {
       return Ok(());
     }
 
-    // Detect error => two variables with the same name in the same local scope.
+    // Detect error => two variables with same name
+    // in the same local scope.
     for local in self
       .compiler
       .locals
@@ -566,6 +573,7 @@ impl Parser {
     self.compiler.locals.push(Local {
       depth: self.compiler.scope_depth,
       name: self.previous.to_owned(),
+      is_captured: false,
     });
     self.compiler.local_count += 1;
     Ok(())
@@ -574,14 +582,24 @@ impl Parser {
   /// Try to find the local variable in the current scope.
   ///
   /// If find, return the index of the local variable.
-  fn resolve_local(&mut self) -> Option<usize> {
+  fn resolve_local(&mut self) -> Result<Option<usize>, InterpretError> {
     let pos = self
       .compiler
       .locals
       .iter()
       .take(self.compiler.local_count)
       .position(|local| local.name.lexeme == self.previous.lexeme);
-    pos
+    if let Some(pos) = pos {
+      if !self.compiler.locals[pos].is_captured {
+        Err(InterpretError::CompileError(
+          "Can't read local variable in its own initializer.".into(),
+        ))
+      } else {
+        Ok(Some(pos))
+      }
+    } else {
+      Ok(pos)
+    }
   }
 
   /// Declare bind a new variable.
