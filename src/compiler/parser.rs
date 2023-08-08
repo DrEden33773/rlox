@@ -15,9 +15,15 @@ use crate::{
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-use super::{Compiler, Local};
+use super::*;
 
 type ParseFn = fn(&mut Parser, bool) -> Result<(), InterpretError>;
+
+pub mod compile_time_error_handlers;
+pub mod emit_methods;
+pub mod ops_after_get_parse_rule;
+pub mod statement_methods;
+pub mod variable_methods;
 
 /// ## ParseRule
 ///
@@ -227,129 +233,6 @@ pub struct Parser {
 impl Init for Parser {}
 
 impl Parser {
-  fn number_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.number()
-  }
-
-  fn number(&mut self) -> Result<(), InterpretError> {
-    match self.previous.lexeme.parse::<f64>() {
-      Ok(value) => self.emit_constant(value.into()),
-      Err(_) => Err(InterpretError::CompileError(
-        "Failed to parse number(value).".into(),
-      )),
-    }
-  }
-
-  fn string_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.string()
-  }
-
-  fn string(&mut self) -> Result<(), InterpretError> {
-    let len = self.previous.lexeme.len();
-    let rust_string = self.previous.lexeme[1..len - 1].to_owned();
-    let obj_string = ObjString::from(rust_string);
-    let obj = obj_string.cast_to_obj_ptr();
-    self.emit_constant(Value::obj_val(obj))
-  }
-
-  fn named_variable(&mut self, can_assign: bool) -> Result<(), InterpretError> {
-    let arg = self.resolve_local()?;
-    let (arg, get_op, set_op) = if let Some(arg) = arg {
-      (arg as u8, OpCode::GetLocal, OpCode::SetLocal)
-    } else {
-      (
-        self.identifier_constant()?,
-        OpCode::GetGlobal,
-        OpCode::SetGlobal,
-      )
-    };
-    if can_assign && self.match_token(TokenType::Equal)? {
-      self.expression()?;
-      self.emit_bytes(&[set_op as u8, arg])
-    } else {
-      self.emit_bytes(&[get_op as u8, arg])
-    }
-  }
-
-  fn variable(&mut self, can_assign: bool) -> Result<(), InterpretError> {
-    self.named_variable(can_assign)
-  }
-
-  fn unary_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.unary()
-  }
-
-  fn unary(&mut self) -> Result<(), InterpretError> {
-    let operator_type = self.previous.token_type;
-
-    // Compile the operand
-    self.parse_precedence(Precedence::Unary)?;
-
-    // Emit the operator instruction
-    match operator_type {
-      TokenType::Bang => self.emit_byte(OpCode::Not as u8),
-      TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
-      _ => Err(InterpretError::CompileError(
-        "Unknown unary operator.".into(),
-      )),
-    }
-  }
-
-  fn binary_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.binary()
-  }
-
-  fn binary(&mut self) -> Result<(), InterpretError> {
-    let operator_type = self.previous.token_type;
-    let rule = self.get_rule(operator_type);
-    self.parse_precedence(rule.precedence.next())?;
-
-    match operator_type {
-      TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8),
-      TokenType::EqualEqual => self.emit_byte(OpCode::Equal as u8),
-      TokenType::Greater => self.emit_byte(OpCode::Greater as u8),
-      TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8),
-      TokenType::Less => self.emit_byte(OpCode::Less as u8),
-      TokenType::LessEqual => self.emit_byte(OpCode::LessEqual as u8),
-      TokenType::Plus => self.emit_byte(OpCode::Add as u8),
-      TokenType::Minus => self.emit_byte(OpCode::Subtract as u8),
-      TokenType::Star => self.emit_byte(OpCode::Multiply as u8),
-      TokenType::Slash => self.emit_byte(OpCode::Divide as u8),
-      _ => Err(InterpretError::CompileError(
-        "Unknown unary operator.".into(),
-      )),
-    }
-  }
-
-  fn literal_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.literal()
-  }
-
-  fn literal(&mut self) -> Result<(), InterpretError> {
-    match self.previous.token_type {
-      TokenType::False => self.emit_byte(OpCode::False as u8),
-      TokenType::Nil => self.emit_byte(OpCode::Nil as u8),
-      TokenType::True => self.emit_byte(OpCode::True as u8),
-      _ => Err(InterpretError::CompileError(
-        "Unknown literal operator.".into(),
-      )),
-    }
-  }
-
-  fn grouping_adapter(&mut self, _: bool) -> Result<(), InterpretError> {
-    self.grouping()
-  }
-
-  fn grouping(&mut self) -> Result<(), InterpretError> {
-    self.expression()?;
-    self.consume_token(
-      TokenType::RightParen,
-      "Expect `)` after expression.".to_owned(),
-    )
-  }
-}
-
-impl Parser {
   /// This function starts at the current token,
   /// then parses any expression at the given precedence level or higher.
   fn parse_precedence(&mut self, precedence: Precedence) -> Result<(), InterpretError> {
@@ -493,6 +376,8 @@ impl Parser {
   fn statement(&mut self) -> Result<(), InterpretError> {
     if self.match_token(TokenType::Print)? {
       self.print_statement()
+    } else if self.match_token(TokenType::If)? {
+      self.if_statement()
     } else if self.match_token(TokenType::LeftBrace)? {
       self.begin_scope();
       self.block()?;
@@ -501,164 +386,6 @@ impl Parser {
     } else {
       self.expression_statement()
     }
-  }
-}
-
-impl Parser {
-  fn parse_variable(&mut self, message: String) -> Result<u8, InterpretError> {
-    self.consume_token(TokenType::Identifier, message)?;
-
-    // record if it's a local variable (scope_depth > 0)
-    self.declare_variable()?;
-
-    // if in local scope, simply exit (with a fake index)
-    if self.compiler.scope_depth > 0 {
-      return Ok(0);
-    }
-
-    self.identifier_constant()
-  }
-
-  fn mark_initialized(&mut self) {
-    self.compiler.locals.last_mut().unwrap().is_captured = true;
-  }
-
-  fn define_variable(&mut self, global_index: u8) -> Result<(), InterpretError> {
-    if self.compiler.scope_depth > 0 {
-      self.mark_initialized();
-      Ok(())
-    } else {
-      self.emit_bytes(&[OpCode::DefineGlobal as u8, global_index])
-    }
-  }
-
-  /// Records the existence of variable (only for locals).
-  fn declare_variable(&mut self) -> Result<(), InterpretError> {
-    if self.compiler.scope_depth == 0 {
-      return Ok(());
-    }
-
-    // Detect error => two variables with same name
-    // in the same local scope.
-    for local in self
-      .compiler
-      .locals
-      .iter()
-      .rev()
-      .take(self.compiler.local_count)
-    {
-      if local.depth < self.compiler.scope_depth {
-        break;
-      }
-      if local.name.lexeme == self.previous.lexeme {
-        return Err(InterpretError::CompileError(
-          "Already a variable with this name in this scope.".into(),
-        ));
-      }
-    }
-
-    self.add_local()
-  }
-
-  fn identifier_constant(&mut self) -> Result<u8, InterpretError> {
-    self.make_constant(Value::obj_val(
-      ObjString::from(self.previous.lexeme.to_owned()).cast_to_obj_ptr(),
-    ))
-  }
-
-  fn add_local(&mut self) -> Result<(), InterpretError> {
-    if self.compiler.local_count > u8::MAX as usize + 1 {
-      return Err(InterpretError::CompileError(
-        "Too many local variables in function(At most: 256).".into(),
-      ));
-    }
-    self.compiler.locals.push(Local {
-      depth: self.compiler.scope_depth,
-      name: self.previous.to_owned(),
-      is_captured: false,
-    });
-    self.compiler.local_count += 1;
-    Ok(())
-  }
-
-  /// Try to find the local variable in the current scope.
-  ///
-  /// If find, return the index of the local variable.
-  fn resolve_local(&mut self) -> Result<Option<usize>, InterpretError> {
-    let pos = self
-      .compiler
-      .locals
-      .iter()
-      .take(self.compiler.local_count)
-      .position(|local| local.name.lexeme == self.previous.lexeme);
-    if let Some(pos) = pos {
-      if !self.compiler.locals[pos].is_captured {
-        return Err(InterpretError::CompileError(
-          "Can't read local variable in its own initializer.".into(),
-        ));
-      };
-    }
-    Ok(pos)
-  }
-
-  /// Declare: bind a new variable.
-  fn var_declaration(&mut self) -> Result<(), InterpretError> {
-    let global_index = self.parse_variable("Expect variable name.".into())?;
-
-    if self.match_token(TokenType::Equal)? {
-      self.expression()?;
-    } else {
-      self.emit_byte(OpCode::Nil as u8)?;
-    }
-
-    self.consume_token(
-      TokenType::Semicolon,
-      "Expect `;` after variable declaration.".into(),
-    )?;
-
-    self.define_variable(global_index)
-  }
-}
-
-impl Parser {
-  fn print_statement(&mut self) -> Result<(), InterpretError> {
-    self.expression()?;
-    self.consume_token(TokenType::Semicolon, "Expect `;` after value.".into())?;
-    self.emit_byte(OpCode::Print as u8)
-  }
-
-  /// If in panic_mode, then synchronize (for better recognizing what error has occurred).
-  ///
-  /// Synchronize means that, we will skip tokens indiscriminately
-  /// until we reach something that looks like a statement boundary.
-  ///
-  /// E.g.: class | fun | var | for | if | while | print | return
-  fn synchronize(&mut self) -> Result<(), InterpretError> {
-    self.panic_mode = false;
-    while self.current.token_type != TokenType::Eof {
-      if self.previous.token_type == TokenType::Semicolon {
-        return Ok(());
-      }
-      match self.current.token_type {
-        TokenType::Class
-        | TokenType::Fun
-        | TokenType::Var
-        | TokenType::For
-        | TokenType::If
-        | TokenType::While
-        | TokenType::Print
-        | TokenType::Return => return Ok(()),
-        _ => {}
-      }
-      self.advance_token()?;
-    }
-    Ok(())
-  }
-
-  fn expression_statement(&mut self) -> Result<(), InterpretError> {
-    self.expression()?;
-    self.consume_token(TokenType::Semicolon, "Expect `;` after expression.".into())?;
-    self.emit_byte(OpCode::Pop as u8)
   }
 }
 
@@ -685,72 +412,5 @@ impl Parser {
     } else {
       Ok(index as u8)
     }
-  }
-}
-
-impl Parser {
-  /// Appending a sequence of bytes to the chunk (in order).
-  fn emit_bytes(&mut self, bytes: &[u8]) -> Result<(), InterpretError> {
-    for &byte in bytes {
-      self.emit_byte(byte)?;
-    }
-    Ok(())
-  }
-
-  /// Appending a single byte to the chunk.
-  fn emit_byte(&mut self, byte: u8) -> Result<(), InterpretError> {
-    self.chunk.write_chunk(byte, self.previous.line);
-    Ok(())
-  }
-
-  /// Specifically appending the return instruction to the chunk.
-  fn emit_return(&mut self) -> Result<(), InterpretError> {
-    self.emit_byte(OpCode::Return as u8)
-  }
-
-  /// Wrapper for appending `constant` and `index` info to the chunk.
-  fn emit_constant(&mut self, value: Value) -> Result<(), InterpretError> {
-    let constant_index = self.make_constant(value)?;
-    self.emit_bytes(&[OpCode::Constant as u8, constant_index])
-  }
-
-  /// Operations after end of compilation.
-  pub(crate) fn end_compiler(&mut self) -> Result<(), InterpretError> {
-    self.emit_return()
-  }
-}
-
-impl Parser {
-  /// Report error at current token.
-  fn error_at_current(&mut self, message: String) -> Result<(), InterpretError> {
-    self.error_at(true, message)
-  }
-
-  // Report error at previous token.
-  fn error(&mut self, message: String) -> Result<(), InterpretError> {
-    self.error_at(false, message)
-  }
-
-  /// Report error at selected token.
-  fn error_at(&mut self, if_current: bool, message: String) -> Result<(), InterpretError> {
-    if self.panic_mode {
-      return Ok(());
-    }
-    self.panic_mode = true;
-    let token = if if_current {
-      &self.current
-    } else {
-      &self.previous
-    };
-    let mut error_str = String::new();
-    error_str += &format!("[line {}] Error", token.line);
-    match token.token_type {
-      TokenType::Eof => error_str += " at end",
-      TokenType::Error => {}
-      _ => error_str += &format!(" at '{}'", token.lexeme),
-    }
-    error_str += &format!(": {}", message);
-    self.had_error = true;
-    Err(InterpretError::CompileError(error_str))
   }
 }

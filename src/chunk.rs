@@ -15,29 +15,39 @@ use enum_repr::EnumU8;
 /// virtual machine.
 #[derive(EnumU8)]
 pub enum OpCode {
+  /* Constants */
   Constant,
   Nil,
   True,
   False,
+  /* Comparisons */
   Equal,
   Greater,
   Less,
   NotEqual,
   GreaterEqual,
   LessEqual,
+  /* Binary Arith Opts */
   Add,
   Subtract,
   Multiply,
   Divide,
+  /* Unary Arith Opts */
   Not,
   Negate,
+  /* Control Flow Opts */
+  JumpIfFalse,
+  Jump,
+  /* Helper Opts */
   Print,
   Pop,
+  /* Variable Getters/Setters */
   DefineGlobal,
   GetGlobal,
   GetLocal,
   SetGlobal,
   SetLocal,
+  /* Return */
   Return,
 }
 

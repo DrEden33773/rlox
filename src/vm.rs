@@ -114,6 +114,12 @@ impl VM {
     self.ip += 1;
     self.chunk.constants.values[index as usize]
   }
+
+  /// Read a short(u16) from the chunk (update ip).
+  fn read_u16(&mut self) -> u16 {
+    self.ip += 2;
+    u16::from_be_bytes([self.chunk.code[self.ip - 2], self.chunk.code[self.ip - 1]])
+  }
 }
 
 impl VM {
@@ -183,6 +189,7 @@ impl VM {
   #[inline]
   fn run_one_step(&mut self) -> Result<(), InterpretError> {
     let raw_result = match self.read_byte().into() {
+      /* Constants */
       OpCode::Constant => {
         let constant = self.read_constant();
         self.stack.push(constant);
@@ -200,18 +207,33 @@ impl VM {
         self.stack.push(Value::bool_val(false));
         Ok(())
       }
+      /* Comparisons */
       OpCode::Equal => self.binary_op(|l, r| Ok(Value::bool_val(l == r))),
       OpCode::Greater => self.binary_op(|l, r| Ok(Value::bool_val(l > r))),
       OpCode::Less => self.binary_op(|l, r| Ok(Value::bool_val(l < r))),
       OpCode::NotEqual => self.binary_op(|l, r| Ok(Value::bool_val(l != r))),
       OpCode::GreaterEqual => self.binary_op(|l, r| Ok(Value::bool_val(l >= r))),
       OpCode::LessEqual => self.binary_op(|l, r| Ok(Value::bool_val(l <= r))),
+      /* Binary Arith Opts */
       OpCode::Add => self.binary_op(|l, r| l + r),
       OpCode::Subtract => self.binary_op(|l, r| l - r),
       OpCode::Multiply => self.binary_op(|l, r| l * r),
       OpCode::Divide => self.binary_op(|l, r| l / r),
+      /* Unary Arith Opts */
       OpCode::Not => self.unary_op(|v| !v),
       OpCode::Negate => self.unary_op(|v| -v),
+      /* Control Flow Opts */
+      OpCode::JumpIfFalse => {
+        let offset = self.read_u16();
+        if self.stack.last().unwrap().is_falsey() {
+          self.ip = (self.ip as isize + offset as i16 as isize) as usize;
+        }
+        Ok(())
+      }
+      OpCode::Jump => {
+        todo!()
+      }
+      /* Helper Opts */
       OpCode::Print => {
         if let Some(value) = self.stack.pop() {
           println!("StdOut => {}", value);
@@ -226,6 +248,7 @@ impl VM {
         self.stack.pop();
         Ok(())
       }
+      /* Variable Getters/Setters */
       OpCode::DefineGlobal => {
         let name = self.read_constant();
         if let Ok(name) = name.as_string() {
@@ -306,6 +329,7 @@ impl VM {
           )))
         }
       }
+      /* Return */
       OpCode::Return => {
         return Ok(());
       }

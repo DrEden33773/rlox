@@ -278,6 +278,10 @@ impl Value {
   pub fn is_number(&self) -> bool {
     self.value_type == ValueType::Number
   }
+
+  pub fn is_falsey(&self) -> bool {
+    self.is_nil() || (self.is_bool() && !self.as_bool())
+  }
 }
 
 impl Value {
