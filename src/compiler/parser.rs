@@ -145,7 +145,10 @@ static RULES_VEC: Lazy<Vec<(TokenType, ParseRule)>> = Lazy::new(|| {
       TokenType::Number,
       ParseRule::new(Some(Parser::number_adapter), None, Precedence::None),
     ),
-    (TokenType::And, ParseRule::new(None, None, Precedence::None)),
+    (
+      TokenType::And,
+      ParseRule::new(None, Some(Parser::and), Precedence::And),
+    ),
     (
       TokenType::Class,
       ParseRule::new(None, None, Precedence::None),
@@ -165,7 +168,10 @@ static RULES_VEC: Lazy<Vec<(TokenType, ParseRule)>> = Lazy::new(|| {
       TokenType::Nil,
       ParseRule::new(Some(Parser::literal_adapter), None, Precedence::None),
     ),
-    (TokenType::Or, ParseRule::new(None, None, Precedence::None)),
+    (
+      TokenType::Or,
+      ParseRule::new(None, Some(Parser::or), Precedence::Or),
+    ),
     (
       TokenType::Print,
       ParseRule::new(None, None, Precedence::None),

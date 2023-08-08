@@ -8,14 +8,30 @@ impl Parser {
   }
 
   pub(crate) fn if_statement(&mut self) -> Result<(), InterpretError> {
+    /* condition */
     self.consume_token(TokenType::LeftParen, "Expect `(` after `if`.".into())?;
     self.expression()?;
     self.consume_token(TokenType::RightParen, "Expect `)` after condition.".into())?;
 
+    /* `consume`: if {...} */
     let then_jump = self.emit_jump(OpCode::JumpIfFalse as u8)?;
+    // pop top of stack **iff** `condition` is true
+    self.emit_byte(OpCode::Pop as u8)?;
     self.statement()?;
 
-    self.patch_jump(then_jump)
+    /* patch `if` jump */
+    let else_jump = self.emit_jump(OpCode::Jump as u8)?;
+    self.patch_jump(then_jump)?;
+
+    /* `consume`: else {...} */
+    // pop top of stack **iff** `condition` is false
+    self.emit_byte(OpCode::Pop as u8)?;
+    if self.match_token(TokenType::Else)? {
+      self.statement()?;
+    }
+
+    /* patch `else` jump */
+    self.patch_jump(else_jump)
   }
 
   /// If in panic_mode, then synchronize (for better recognizing what error has occurred).

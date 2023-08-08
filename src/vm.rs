@@ -231,7 +231,9 @@ impl VM {
         Ok(())
       }
       OpCode::Jump => {
-        todo!()
+        let offset = self.read_u16();
+        self.ip = (self.ip as isize + offset as i16 as isize) as usize;
+        Ok(())
       }
       /* Helper Opts */
       OpCode::Print => {

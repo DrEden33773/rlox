@@ -122,3 +122,36 @@ impl Parser {
     )
   }
 }
+
+impl Parser {
+  pub(crate) fn and(&mut self, _: bool) -> Result<(), InterpretError> {
+    /* left: has been compiled */
+
+    // left == false: jump/ignore right
+    let end_jump = self.emit_jump(OpCode::JumpIfFalse as u8)?;
+
+    // else: Pop left, compile right
+    self.emit_byte(OpCode::Pop as u8)?;
+    self.parse_precedence(Precedence::And)?;
+
+    self.patch_jump(end_jump)
+  }
+
+  pub(crate) fn or(&mut self, _: bool) -> Result<(), InterpretError> {
+    /* left operand: has been compiled */
+
+    // left == false: jump/ignore `attempting to jump/ignore right` instruction
+    let else_jump = self.emit_jump(OpCode::JumpIfFalse as u8)?;
+
+    // else: jump/ignore right
+    let end_jump = self.emit_jump(OpCode::Jump as u8)?;
+
+    // left == false: Pop `attempting to jump/ignore right` instruction
+    self.patch_jump(else_jump)?;
+    self.emit_byte(OpCode::Pop as u8)?;
+
+    // else: continues to compile right
+    self.parse_precedence(Precedence::Or)?;
+    self.patch_jump(end_jump)
+  }
+}

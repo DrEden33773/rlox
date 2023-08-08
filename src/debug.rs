@@ -22,6 +22,9 @@ pub trait Debug {
 
   /// Print a byte instruction (mainly used for local_variables).
   fn byte_instruction(&self, name: &str, offset: usize) -> usize;
+
+  /// Print a full bunch of jump instruction
+  fn jump_instruction(&self, name: &str, sign: usize, offset: usize) -> usize;
 }
 
 impl Debug for Chunk {
@@ -64,8 +67,8 @@ impl Debug for Chunk {
         OpCode::Divide => self.simple_instruction("@ Divide", offset),
         OpCode::Not => self.simple_instruction("@ Not", offset),
         OpCode::Negate => self.simple_instruction("@ Negate", offset),
-        OpCode::JumpIfFalse => todo!(),
-        OpCode::Jump => todo!(),
+        OpCode::JumpIfFalse => self.jump_instruction("=>JumpIfFalse", 1, offset),
+        OpCode::Jump => self.jump_instruction("=>Jump", 1, offset),
         OpCode::Print => self.simple_instruction("..Print", offset),
         OpCode::Pop => self.simple_instruction("..Pop", offset),
         OpCode::DefineGlobal => self.constant_instruction(":=DefineGlobal", offset),
@@ -103,6 +106,17 @@ impl Debug for Chunk {
     println!("{:16} {:4}(slot)", name, slot);
     // move 2 byte ahead
     offset + 2
+  }
+
+  fn jump_instruction(&self, name: &str, sign: usize, offset: usize) -> usize {
+    let jump = ((self.code[offset + 1] as u16) << 8) | self.code[offset + 2] as u16;
+    println!(
+      "{:16} {:4} -> {}",
+      name,
+      offset,
+      offset + 3 + sign * jump as usize
+    );
+    offset + 3
   }
 
   fn line_number(&self, offset: usize) -> usize {
